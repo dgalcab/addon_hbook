@@ -1,0 +1,435 @@
+/**
+ * Addon Filtros HBook — estilos públicos.
+ * Todos los selectores viven bajo #addon-filtros-wrapper / .addon-filtros-toggle
+ * para no colisionar con los estilos del tema.
+ */
+
+#addon-filtros-wrapper {
+	--addon-accent: #fdcf6d;
+	--addon-accent-hover: #fcb928;
+	--addon-text-on-accent: #000000;
+	--addon-text: #1a1a1a;
+	--addon-text-muted: #6b6b6b;
+	--addon-border: #e7e2d8;
+	--addon-surface: #ffffff;
+	--addon-radius: 12px;
+
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 24px 16px 64px;
+	display: block;
+}
+
+#addon-filtros-wrapper *,
+#addon-filtros-wrapper *::before,
+#addon-filtros-wrapper *::after {
+	box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════════════
+   LAYOUT DESKTOP (>992px): dos columnas con CSS Grid
+══════════════════════════════════════════════ */
+
+@media (min-width: 992px) {
+	#addon-filtros-wrapper {
+		display: grid;
+		grid-template-columns: 300px 1fr;
+		align-items: start;
+		gap: 32px;
+	}
+}
+
+/* ══════════════════════════════════════════════
+   PANEL DE FILTROS (columna izquierda)
+══════════════════════════════════════════════ */
+
+.addon-filtros-panel {
+	background: var(--addon-surface);
+	border: 1px solid var(--addon-border);
+	border-radius: var(--addon-radius);
+	padding: 20px;
+}
+
+@media (min-width: 992px) {
+	.addon-filtros-panel {
+		width: 300px;
+		position: sticky;
+		top: 20px;
+		max-height: calc(100vh - 40px);
+		overflow-y: auto;
+	}
+}
+
+.addon-filtros-panel-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	margin-bottom: 16px;
+}
+
+.addon-filtros-panel-title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--addon-text);
+}
+
+.addon-filtros-panel-close {
+	display: none;
+	appearance: none;
+	background: transparent;
+	border: none;
+	font-size: 28px;
+	line-height: 1;
+	cursor: pointer;
+	color: var(--addon-text);
+	padding: 4px 8px;
+}
+
+.addon-filtros-form {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.addon-filtros-group {
+	border: none;
+	margin: 0;
+	padding: 0;
+}
+
+.addon-filtros-group-title {
+	padding: 0 0 8px;
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--addon-text-muted);
+}
+
+.addon-filtros-checkbox {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 6px 0;
+	cursor: pointer;
+	font-size: 15px;
+	color: var(--addon-text);
+}
+
+.addon-filtros-checkbox-input {
+	appearance: none;
+	width: 18px;
+	height: 18px;
+	flex: 0 0 18px;
+	border: 2px solid var(--addon-border);
+	border-radius: 4px;
+	position: relative;
+	cursor: pointer;
+	transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.addon-filtros-checkbox-input:focus-visible {
+	outline: 2px solid var(--addon-accent);
+	outline-offset: 2px;
+	border-color: var(--addon-accent);
+}
+
+.addon-filtros-checkbox-input:checked {
+	background-color: var(--addon-accent);
+	border-color: var(--addon-accent);
+}
+
+.addon-filtros-checkbox-input:checked::after {
+	content: "";
+	position: absolute;
+	left: 5px;
+	top: 1px;
+	width: 5px;
+	height: 10px;
+	border: solid var(--addon-text-on-accent);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+.addon-filtros-checkbox-label {
+	line-height: 1.3;
+}
+
+/* ══════════════════════════════════════════════
+   RESULTADOS (columna derecha)
+══════════════════════════════════════════════ */
+
+.addon-filtros-results {
+	min-width: 0;
+}
+
+.addon-filtros-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	gap: 24px;
+	transition: opacity 0.2s ease;
+}
+
+.addon-filtros-grid.is-loading {
+	opacity: 0.5;
+	pointer-events: none;
+	position: relative;
+}
+
+.addon-filtros-grid.is-loading::after {
+	content: "";
+	grid-column: 1 / -1;
+}
+
+.addon-filtros-empty {
+	grid-column: 1 / -1;
+	text-align: center;
+	padding: 48px 16px;
+	color: var(--addon-text-muted);
+	font-size: 16px;
+}
+
+/* Skeleton loader: se inyecta como placeholders mientras carga el AJAX */
+.addon-filtros-skeleton-card {
+	border-radius: var(--addon-radius);
+	overflow: hidden;
+	background: var(--addon-surface);
+	border: 1px solid var(--addon-border);
+}
+
+.addon-filtros-skeleton-img,
+.addon-filtros-skeleton-line {
+	background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%);
+	background-size: 400% 100%;
+	animation: addon-filtros-shimmer 1.4s ease infinite;
+}
+
+.addon-filtros-skeleton-img {
+	width: 100%;
+	aspect-ratio: 4 / 3;
+}
+
+.addon-filtros-skeleton-body {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.addon-filtros-skeleton-line {
+	height: 12px;
+	border-radius: 6px;
+}
+
+.addon-filtros-skeleton-line--title {
+	width: 70%;
+	height: 16px;
+}
+
+.addon-filtros-skeleton-line--btn {
+	width: 100%;
+	height: 38px;
+	border-radius: 8px;
+	margin-top: 8px;
+}
+
+@keyframes addon-filtros-shimmer {
+	0% {
+		background-position: 100% 0;
+	}
+	100% {
+		background-position: 0 0;
+	}
+}
+
+/* ══════════════════════════════════════════════
+   TARJETAS DE ALOJAMIENTO
+══════════════════════════════════════════════ */
+
+.addon-filtros-card {
+	background: var(--addon-surface);
+	border-radius: var(--addon-radius);
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.addon-filtros-card:hover {
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.addon-filtros-card-media {
+	overflow: hidden;
+	aspect-ratio: 4 / 3;
+	display: block;
+}
+
+.addon-filtros-card-img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+	transition: transform 0.35s ease;
+}
+
+.addon-filtros-card-img--placeholder {
+	background: linear-gradient(135deg, #f2ede3, #e7e2d8);
+}
+
+.addon-filtros-card:hover .addon-filtros-card-img {
+	transform: scale(1.06);
+}
+
+.addon-filtros-card-body {
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	flex: 1;
+}
+
+.addon-filtros-card-title {
+	margin: 0;
+	font-size: 18px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.addon-filtros-card-title a {
+	color: var(--addon-text);
+	text-decoration: none;
+}
+
+.addon-filtros-card-title a:hover {
+	text-decoration: underline;
+}
+
+.addon-filtros-card-badges {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.addon-filtros-badge {
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--addon-text);
+	background: #f6f2e8;
+	border: 1px solid var(--addon-border);
+	border-radius: 999px;
+	padding: 4px 10px;
+	white-space: nowrap;
+}
+
+.addon-filtros-book-btn {
+	margin-top: auto;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	background: var(--addon-accent);
+	color: var(--addon-text-on-accent);
+	font-weight: 600;
+	font-size: 15px;
+	text-decoration: none;
+	text-align: center;
+	border: none;
+	border-radius: 8px;
+	padding: 12px 20px;
+	cursor: pointer;
+	transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.addon-filtros-book-btn:hover,
+.addon-filtros-book-btn:active,
+.addon-filtros-book-btn:focus-visible {
+	background: var(--addon-accent-hover);
+	color: var(--addon-text-on-accent);
+}
+
+.addon-filtros-book-btn:focus-visible {
+	outline: 2px solid var(--addon-text);
+	outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════
+   MOBILE (<992px): panel off-canvas + botón flotante
+══════════════════════════════════════════════ */
+
+@media (max-width: 991.98px) {
+	.addon-filtros-panel {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: min(85vw, 340px);
+		height: 100vh;
+		max-height: none;
+		z-index: 10000;
+		border-radius: 0;
+		transform: translateX(-100%);
+		transition: transform 0.3s ease;
+		overflow-y: auto;
+		box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+	}
+
+	.addon-filtros-panel.is-open {
+		transform: translateX(0);
+	}
+
+	.addon-filtros-panel-close {
+		display: inline-block;
+	}
+
+	.addon-filtros-toggle {
+		display: inline-flex;
+	}
+}
+
+.addon-filtros-toggle {
+	display: none;
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	z-index: 9999;
+	border-radius: 50px;
+	background: var(--addon-accent);
+	color: var(--addon-text-on-accent);
+	border: none;
+	align-items: center;
+	justify-content: center;
+	font-weight: 600;
+	font-size: 14px;
+	padding: 14px 22px;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+	cursor: pointer;
+	transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.addon-filtros-toggle:hover,
+.addon-filtros-toggle:active,
+.addon-filtros-toggle:focus-visible {
+	background: var(--addon-accent-hover);
+	transform: translateY(-1px);
+}
+
+/* Overlay para cerrar el panel al tocar fuera, en móvil */
+.addon-filtros-panel-overlay {
+	display: none;
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+	z-index: 9998;
+}
+
+@media (max-width: 991.98px) {
+	.addon-filtros-panel-overlay.is-open {
+		display: block;
+	}
+}
