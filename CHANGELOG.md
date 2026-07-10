@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+- Corrige el grid de tarjetas de resultado: el CSS apuntaba a `.hb-accom-list`, pero cada `.hb-accom` en realidad cuelga de `.hb-multi-accom-choices` (dos niveles más adentro), así que el grid no tenía ningún efecto y las tarjetas seguían apilándose en una columna. Corregido apuntando al contenedor correcto, con más especificidad que el CSS personalizado que ya hubiera en el sitio.
+
 ## 2.0.0
 
 Rediseño completo de la arquitectura de búsqueda (no solo mejoras incrementales sobre la 1.0):
