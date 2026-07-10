@@ -160,30 +160,124 @@
 
 /* ══════════════════════════════════════════════
    RESULTADOS (columna derecha)
+
+   Este bloque NO genera su propio HTML de resultados: incrusta
+   [hb_booking_form all_accom="yes"] de HBook tal cual (buscador de
+   fechas/personas + `.hb-accom-list` con los resultados). Aquí solo se
+   restyla, con selectores scopeados a #addon-filtros-wrapper, el
+   markup que HBook ya genera — sin tocar su HTML, sus clases ni su JS.
 ══════════════════════════════════════════════ */
 
 .addon-filtros-results {
 	min-width: 0;
 }
 
-.addon-filtros-grid {
+/* Botón principal de búsqueda del formulario de HBook */
+#addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"],
+#addon-filtros-wrapper .hb-change-search-wrapper input[type="submit"] {
+	background: var(--addon-accent);
+	color: var(--addon-text-on-accent);
+	border: none;
+	border-radius: 8px;
+	font-weight: 600;
+	padding: 12px 24px;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+#addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"]:hover,
+#addon-filtros-wrapper .hb-change-search-wrapper input[type="submit"]:hover {
+	background: var(--addon-accent-hover);
+}
+
+/* Contenedor de resultados de HBook: lo convertimos en grid responsive */
+#addon-filtros-wrapper .hb-accom-list {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 	gap: 24px;
+	margin-top: 24px;
 	transition: opacity 0.2s ease;
 }
 
-.addon-filtros-grid.is-loading {
-	opacity: 0.5;
-	pointer-events: none;
-	position: relative;
+#addon-filtros-wrapper .hb-accom-list:empty {
+	display: block;
+	margin-top: 0;
 }
 
-.addon-filtros-grid.is-loading::after {
-	content: "";
-	grid-column: 1 / -1;
+/* Cada resultado de HBook (<div class="hb-accom hb-accom-id-X" data-accom-id="X">) */
+#addon-filtros-wrapper .hb-accom-list .hb-accom {
+	background: var(--addon-surface);
+	border: 1px solid var(--addon-border);
+	border-radius: var(--addon-radius);
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+	overflow: hidden;
+	padding: 16px;
+	transition: box-shadow 0.2s ease;
 }
 
+#addon-filtros-wrapper .hb-accom-list .hb-accom:hover {
+	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+#addon-filtros-wrapper .hb-accom-img {
+	width: 100%;
+	height: auto;
+	border-radius: 8px;
+	object-fit: cover;
+	margin-bottom: 12px;
+}
+
+#addon-filtros-wrapper .hb-accom-title {
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--addon-text);
+}
+
+#addon-filtros-wrapper .hb-accom-title a {
+	color: inherit;
+	text-decoration: none;
+}
+
+#addon-filtros-wrapper .hb-accom-title a:hover {
+	text-decoration: underline;
+}
+
+#addon-filtros-wrapper .hb-accom-desc {
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--addon-text-muted);
+	margin-top: 6px;
+}
+
+/* Botones "Reservar esta opción" / "Ver alojamiento" de cada resultado */
+#addon-filtros-wrapper .hb-select-accom-wrapper input[type="submit"] {
+	background: var(--addon-accent);
+	color: var(--addon-text-on-accent);
+	border: none;
+	border-radius: 8px;
+	font-weight: 600;
+	width: 100%;
+	padding: 12px 20px;
+	cursor: pointer;
+	transition: background-color 0.15s ease;
+}
+
+#addon-filtros-wrapper .hb-select-accom-wrapper input[type="submit"]:hover {
+	background: var(--addon-accent-hover);
+}
+
+#addon-filtros-wrapper .hb-view-accom input[type="submit"] {
+	background: transparent;
+	border: 1px solid var(--addon-border);
+	color: var(--addon-text);
+	border-radius: 8px;
+	width: 100%;
+	padding: 10px 20px;
+	margin-top: 8px;
+	cursor: pointer;
+}
+
+/* Mensaje propio: "ninguna de las disponibles cumple las características" */
 .addon-filtros-empty {
 	grid-column: 1 / -1;
 	text-align: center;
@@ -192,196 +286,11 @@
 	font-size: 16px;
 }
 
-/* Skeleton loader: se inyecta como placeholders mientras carga el AJAX */
-.addon-filtros-skeleton-card {
-	border-radius: var(--addon-radius);
-	overflow: hidden;
-	background: var(--addon-surface);
-	border: 1px solid var(--addon-border);
-}
-
-.addon-filtros-skeleton-img,
-.addon-filtros-skeleton-line {
-	background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%);
-	background-size: 400% 100%;
-	animation: addon-filtros-shimmer 1.4s ease infinite;
-}
-
-.addon-filtros-skeleton-img {
-	width: 100%;
-	aspect-ratio: 4 / 3;
-}
-
-.addon-filtros-skeleton-body {
-	padding: 16px;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-}
-
-.addon-filtros-skeleton-line {
-	height: 12px;
-	border-radius: 6px;
-}
-
-.addon-filtros-skeleton-line--title {
-	width: 70%;
-	height: 16px;
-}
-
-.addon-filtros-skeleton-line--btn {
-	width: 100%;
-	height: 38px;
-	border-radius: 8px;
-	margin-top: 8px;
-}
-
-@keyframes addon-filtros-shimmer {
-	0% {
-		background-position: 100% 0;
-	}
-	100% {
-		background-position: 0 0;
-	}
-}
-
-/* ══════════════════════════════════════════════
-   TARJETAS DE ALOJAMIENTO
-══════════════════════════════════════════════ */
-
-.addon-filtros-card {
-	background: var(--addon-surface);
-	border-radius: var(--addon-radius);
-	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-	overflow: hidden;
-	display: flex;
-	flex-direction: column;
-	transition: box-shadow 0.2s ease, transform 0.2s ease;
-}
-
-.addon-filtros-card:hover {
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-}
-
-.addon-filtros-card-media {
-	overflow: hidden;
-	aspect-ratio: 4 / 3;
-	display: block;
-}
-
-.addon-filtros-card-img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-	transition: transform 0.35s ease;
-}
-
-.addon-filtros-card-img--placeholder {
-	background: linear-gradient(135deg, #f2ede3, #e7e2d8);
-}
-
-.addon-filtros-card:hover .addon-filtros-card-img {
-	transform: scale(1.06);
-}
-
-.addon-filtros-card-body {
-	padding: 16px;
-	display: flex;
-	flex-direction: column;
-	gap: 10px;
-	flex: 1;
-}
-
-.addon-filtros-card-title {
-	margin: 0;
-	font-size: 18px;
-	font-weight: 600;
-	line-height: 1.3;
-}
-
-.addon-filtros-card-title a {
-	color: var(--addon-text);
-	text-decoration: none;
-}
-
-.addon-filtros-card-title a:hover {
-	text-decoration: underline;
-}
-
-.addon-filtros-card-badges {
-	list-style: none;
-	margin: 0;
-	padding: 0;
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-}
-
-.addon-filtros-badge {
-	font-size: 12px;
-	font-weight: 500;
-	color: var(--addon-text);
-	background: #f6f2e8;
-	border: 1px solid var(--addon-border);
-	border-radius: 999px;
-	padding: 4px 10px;
-	white-space: nowrap;
-}
-
-.addon-filtros-card-desc {
-	font-size: 14px;
-	line-height: 1.5;
-	color: var(--addon-text-muted);
-}
-
-.addon-filtros-book-btn {
-	margin-top: auto;
-	width: 100%;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	background: var(--addon-accent);
-	color: var(--addon-text-on-accent);
-	font-family: inherit;
-	font-weight: 600;
-	font-size: 15px;
-	text-decoration: none;
-	text-align: center;
-	border: none;
-	border-radius: 8px;
-	padding: 12px 20px;
-	cursor: pointer;
-	transition: background-color 0.15s ease, transform 0.1s ease;
-}
-
-.addon-filtros-book-btn:hover,
-.addon-filtros-book-btn:active,
-.addon-filtros-book-btn:focus-visible {
-	background: var(--addon-accent-hover);
-	color: var(--addon-text-on-accent);
-}
-
-.addon-filtros-book-btn:focus-visible {
-	outline: 2px solid var(--addon-text);
-	outline-offset: 2px;
-}
-
-/* Formulario de reserva real de HBook ([hb_booking_form]), oculto hasta
-   que se pulsa "Reservar" en la tarjeta. */
-.addon-filtros-booking-form {
-	display: none;
-	margin-top: 12px;
-}
-
-.addon-filtros-booking-form.is-open {
-	display: block;
-}
-
-.addon-filtros-no-taxonomies {
+.addon-filtros-no-taxonomies,
+.addon-filtros-panel-hint {
 	color: var(--addon-text-muted);
 	font-size: 14px;
-	margin: 0;
+	margin: 0 0 16px;
 }
 
 /* ══════════════════════════════════════════════

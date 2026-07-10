@@ -2,14 +2,24 @@
 /**
  * Motor de renderizado y consultas del addon.
  *
- * Se encarga de:
- * - Renderizar el shortcode [addon_filtros_hbook] (panel de filtros + grid de resultados).
- * - Construir el WP_Query combinable a partir de los términos de taxonomía seleccionados.
- * - Atender el endpoint AJAX que recalcula el grid sin recargar la página.
- * - Incrustar, por tarjeta, el propio formulario de reserva de HBook
- *   ([hb_booking_form accom_id="ID"]) tal y como hace el shortcode nativo
- *   [hb_accommodation_list book_button="yes"] (ver accom-list-render.php
- *   de HBook), para no duplicar ni inventar un flujo de reserva paralelo.
+ * Arquitectura verificada contra el código fuente real de HBook:
+ *
+ * - El buscador real (fechas de entrada/salida, adultos/niños,
+ *   disponibilidad, y la creación de la reserva) lo sigue haciendo
+ *   ÍNTEGRAMENTE el propio [hb_booking_form all_accom="yes"] de HBook,
+ *   incrustado sin modificar. Este addon no reimplementa ni intercepta
+ *   ese motor: sería arriesgado (rompería la reserva) y redundante.
+ * - El panel de "Características" de este addon es un filtro ADICIONAL
+ *   que se superpone client-side sobre los resultados que HBook ya ha
+ *   renderizado: HBook siempre inyecta sus resultados dentro de un
+ *   contenedor `.hb-accom-list`, y cada alojamiento resultante lleva
+ *   `data-accom-id="ID"` (ver front-end/booking-form/search-form.php y
+ *   front-end/booking-form/available-accom.php de HBook). El JS de este
+ *   addon observa ese contenedor y oculta las tarjetas cuyo ID no esté
+ *   entre los alojamientos que cumplen las características marcadas.
+ * - Este endpoint AJAX solo calcula ESA lista de IDs (tax_query puro,
+ *   sin fechas ni disponibilidad); nunca toca el AJAX ni el HTML de
+ *   HBook.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -26,10 +36,10 @@ class Addon_Filtros_Hbook_Engine {
 	/**
 	 * Callback del shortcode [addon_filtros_hbook].
 	 *
-	 * @param array $atts Atributos del shortcode. Soporta 'redirection_url'
-	 *                     y 'thank_you_page_url', pasados tal cual al
-	 *                     [hb_booking_form] embebido en cada tarjeta
-	 *                     (mismos atributos que admite [hb_accommodation_list]).
+	 * @param array $atts Atributos del shortcode. 'redirection_url' y
+	 *                     'thank_you_page_url' se pasan tal cual al
+	 *                     [hb_booking_form] embebido (mismos atributos
+	 *                     que admite ese shortcode de HBook).
 	 * @return string HTML del wrapper #addon-filtros-wrapper.
 	 */
 	public static function render_shortcode( $atts = array() ) {
@@ -37,7 +47,10 @@ class Addon_Filtros_Hbook_Engine {
 			return '<p class="addon-filtros-hbook-error">' . esc_html__( 'El buscador de alojamientos no está disponible en este momento.', 'addon-filtros-hbook' ) . '</p>';
 		}
 
-		// Garantiza los assets aunque el shortcode se ejecute fuera de post_content (do_shortcode en plantillas).
+		if ( ! shortcode_exists( 'hb_booking_form' ) ) {
+			return '<p class="addon-filtros-hbook-error">' . esc_html__( 'HBook no está activo: el formulario de reserva no está disponible.', 'addon-filtros-hbook' ) . '</p>';
+		}
+
 		wp_enqueue_style( 'addon-filtros-hbook-public' );
 		wp_enqueue_script( 'addon-filtros-hbook-public' );
 
@@ -50,16 +63,21 @@ class Addon_Filtros_Hbook_Engine {
 			'addon_filtros_hbook'
 		);
 
+		$booking_form_shortcode = '[hb_booking_form all_accom="yes"';
+		if ( $atts['redirection_url'] ) {
+			$booking_form_shortcode .= ' redirection_url="' . esc_attr( $atts['redirection_url'] ) . '"';
+		} elseif ( $atts['thank_you_page_url'] ) {
+			$booking_form_shortcode .= ' thank_you_page_url="' . esc_attr( $atts['thank_you_page_url'] ) . '"';
+		}
+		$booking_form_shortcode .= ']';
+
 		ob_start();
 		?>
-		<div
-			id="addon-filtros-wrapper"
-			class="addon-filtros-wrapper"
-			data-redirection-url="<?php echo esc_attr( $atts['redirection_url'] ); ?>"
-			data-thank-you-page-url="<?php echo esc_attr( $atts['thank_you_page_url'] ); ?>"
-		>
+		<div id="addon-filtros-wrapper" class="addon-filtros-wrapper">
 			<?php echo self::render_filters_panel(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-			<?php echo self::render_results_panel( $atts ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<div class="addon-filtros-results">
+				<?php echo do_shortcode( $booking_form_shortcode ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			</div>
 		</div>
 		<div class="addon-filtros-panel-overlay" id="addon-filtros-panel-overlay"></div>
 		<button type="button" class="addon-filtros-toggle" id="addon-filtros-toggle" aria-controls="addon-filtros-panel" aria-expanded="false">
@@ -89,6 +107,9 @@ class Addon_Filtros_Hbook_Engine {
 					<?php esc_html_e( 'Todavía no hay características configuradas para los alojamientos.', 'addon-filtros-hbook' ); ?>
 				</p>
 			<?php else : ?>
+				<p class="addon-filtros-panel-hint">
+					<?php esc_html_e( 'Marca las características que buscas. Se aplican sobre los resultados de fechas de abajo.', 'addon-filtros-hbook' ); ?>
+				</p>
 				<form id="addon-filtros-form" class="addon-filtros-form">
 					<?php
 					foreach ( $taxonomies as $taxonomy ) {
@@ -144,202 +165,15 @@ class Addon_Filtros_Hbook_Engine {
 	}
 
 	/**
-	 * Bloque estructural derecho: grid de resultados renderizado en servidor
-	 * con la consulta inicial (sin filtros aplicados).
+	 * Endpoint AJAX: wp_ajax_addon_filtros_hbook_get_allowed_ids /
+	 * wp_ajax_nopriv_addon_filtros_hbook_get_allowed_ids.
 	 *
-	 * @param array $atts Atributos del shortcode (redirection_url, thank_you_page_url).
+	 * Devuelve únicamente los IDs de hb_accommodation que cumplen TODAS
+	 * las características seleccionadas (tax_query puro). No calcula
+	 * fechas ni disponibilidad: eso es responsabilidad exclusiva del
+	 * [hb_booking_form] de HBook, incrustado sin modificar.
 	 */
-	private static function render_results_panel( array $atts ) {
-		$query = self::build_query( array() );
-		ob_start();
-		?>
-		<div class="addon-filtros-results">
-			<div class="addon-filtros-grid" id="addon-filtros-grid" aria-busy="false">
-				<?php echo self::render_cards( $query, $atts['redirection_url'], $atts['thank_you_page_url'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-			</div>
-		</div>
-		<?php
-		wp_reset_postdata();
-		return ob_get_clean();
-	}
-
-	/**
-	 * Construye el WP_Query combinable a partir de los términos seleccionados.
-	 *
-	 * Nota: hb_accommodation no gestiona duplicados multi-idioma vía
-	 * Polylang/WPML aquí (a diferencia de HbDataBaseActions::get_all_accom_ids(),
-	 * que es privada y no accesible desde fuera de HBook). En sitios que usen
-	 * TranslatePress esto no supone diferencia (no duplica posts); en sitios
-	 * con Polylang/WPML con posts duplicados por idioma, usa el filtro
-	 * 'addon_filtros_hbook_query_args' para restringir por idioma si hace falta.
-	 *
-	 * @param array $selected_terms Array asociativo [ taxonomy_slug => [ term_slug, ... ] ].
-	 * @return WP_Query
-	 */
-	private static function build_query( array $selected_terms ) {
-		$tax_query = array( 'relation' => 'AND' );
-
-		foreach ( $selected_terms as $taxonomy => $slugs ) {
-			if ( ! taxonomy_exists( $taxonomy ) || empty( $slugs ) ) {
-				continue;
-			}
-
-			$tax_query[] = array(
-				'taxonomy' => $taxonomy,
-				'field'    => 'slug',
-				'terms'    => $slugs,
-				'operator' => 'IN',
-			);
-		}
-
-		$args = array(
-			'post_type'      => ADDON_FILTROS_HBOOK_CPT,
-			'posts_per_page' => -1,
-			'post_status'    => 'publish',
-			'orderby'        => 'date',
-			'order'          => 'ASC',
-		);
-
-		if ( count( $tax_query ) > 1 ) {
-			$args['tax_query'] = $tax_query; // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
-		}
-
-		$args = apply_filters( 'addon_filtros_hbook_query_args', $args, $selected_terms );
-
-		return new WP_Query( $args );
-	}
-
-	/**
-	 * Renderiza el HTML de las tarjetas para un WP_Query ya ejecutado.
-	 *
-	 * @param WP_Query $query
-	 * @param string   $redirection_url
-	 * @param string   $thank_you_page_url
-	 * @return string
-	 */
-	private static function render_cards( WP_Query $query, $redirection_url = '', $thank_you_page_url = '' ) {
-		if ( ! $query->have_posts() ) {
-			return '<p class="addon-filtros-empty">' . esc_html__( 'No se han encontrado alojamientos con esas características.', 'addon-filtros-hbook' ) . '</p>';
-		}
-
-		ob_start();
-		while ( $query->have_posts() ) {
-			$query->the_post();
-			self::render_card( get_the_ID(), $redirection_url, $thank_you_page_url );
-		}
-		wp_reset_postdata();
-		return ob_get_clean();
-	}
-
-	/**
-	 * Renderiza una única tarjeta de alojamiento, incluyendo (oculto hasta que
-	 * se pulse "Reservar") el formulario de reserva real de HBook, scopeado a
-	 * ese alojamiento mediante [hb_booking_form accom_id="ID"] — el mismo
-	 * mecanismo que usa el propio [hb_accommodation_list book_button="yes"]
-	 * de HBook para evitar un segundo buscador redundante.
-	 *
-	 * @param int    $post_id
-	 * @param string $redirection_url
-	 * @param string $thank_you_page_url
-	 */
-	private static function render_card( $post_id, $redirection_url = '', $thank_you_page_url = '' ) {
-		$hb_utils = addon_filtros_hbook_get_hbook_utils();
-
-		if ( $hb_utils ) {
-			$title        = $hb_utils->get_accom_title( $post_id );
-			$permalink    = $hb_utils->get_accom_link( $post_id );
-			$list_desc    = $hb_utils->get_accom_list_desc( $post_id );
-			$thumb_markup = $hb_utils->get_thumb_mark_up( $post_id, 400, 300, 'addon-filtros-card-img' );
-			$strings      = $hb_utils->get_strings();
-			$book_label   = ! empty( $strings['accom_book_now_button'] ) ? $strings['accom_book_now_button'] : __( 'Reservar', 'addon-filtros-hbook' );
-		} else {
-			// HBook no debería estar inactivo llegados a este punto (post_type_exists ya lo comprueba),
-			// pero se mantiene un fallback defensivo con funciones nativas de WP.
-			$title        = get_the_title( $post_id );
-			$permalink    = get_permalink( $post_id );
-			$list_desc    = '';
-			$thumb_markup = get_the_post_thumbnail( $post_id, 'medium_large', array( 'class' => 'addon-filtros-card-img', 'loading' => 'lazy' ) );
-			$book_label   = __( 'Reservar', 'addon-filtros-hbook' );
-		}
-
-		$badges = self::get_card_badges( $post_id );
-
-		$booking_shortcode = '[hb_booking_form accom_id="' . intval( $post_id ) . '"';
-		if ( $redirection_url ) {
-			$booking_shortcode .= ' redirection_url="' . esc_attr( $redirection_url ) . '"';
-		} elseif ( $thank_you_page_url ) {
-			$booking_shortcode .= ' thank_you_page_url="' . esc_attr( $thank_you_page_url ) . '"';
-		}
-		$booking_shortcode .= ']';
-		?>
-		<div class="addon-filtros-card" data-accommodation-id="<?php echo esc_attr( $post_id ); ?>">
-			<div class="addon-filtros-card-media">
-				<a href="<?php echo esc_url( $permalink ); ?>" tabindex="-1">
-					<?php
-					if ( $thumb_markup ) {
-						echo $thumb_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-					} else {
-						echo '<div class="addon-filtros-card-img addon-filtros-card-img--placeholder"></div>';
-					}
-					?>
-				</a>
-			</div>
-			<div class="addon-filtros-card-body">
-				<h4 class="addon-filtros-card-title">
-					<a href="<?php echo esc_url( $permalink ); ?>"><?php echo esc_html( $title ); ?></a>
-				</h4>
-				<?php if ( ! empty( $badges ) ) : ?>
-					<ul class="addon-filtros-card-badges">
-						<?php foreach ( $badges as $badge ) : ?>
-							<li class="addon-filtros-badge"><?php echo esc_html( $badge ); ?></li>
-						<?php endforeach; ?>
-					</ul>
-				<?php endif; ?>
-				<?php if ( $list_desc ) : ?>
-					<div class="addon-filtros-card-desc"><?php echo wp_kses_post( $list_desc ); ?></div>
-				<?php endif; ?>
-				<button
-					type="button"
-					class="addon-filtros-book-btn"
-					data-accommodation-id="<?php echo esc_attr( $post_id ); ?>"
-					aria-expanded="false"
-				>
-					<?php echo esc_html( $book_label ); ?>
-				</button>
-				<div class="addon-filtros-booking-form">
-					<?php echo do_shortcode( $booking_shortcode ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-				</div>
-			</div>
-		</div>
-		<?php
-	}
-
-	/**
-	 * Recopila los nombres de términos, de todas las taxonomías registradas,
-	 * de un alojamiento para mostrarlos como badges dentro de la tarjeta.
-	 *
-	 * @param int $post_id
-	 * @return string[]
-	 */
-	private static function get_card_badges( $post_id ) {
-		$badges = array();
-
-		foreach ( addon_filtros_hbook_get_taxonomies() as $taxonomy ) {
-			$terms = get_the_terms( $post_id, $taxonomy );
-			if ( is_array( $terms ) ) {
-				foreach ( $terms as $term ) {
-					$badges[] = $term->name;
-				}
-			}
-		}
-
-		return $badges;
-	}
-
-	/**
-	 * Endpoint AJAX: wp_ajax_addon_filtros_hbook_filter / wp_ajax_nopriv_addon_filtros_hbook_filter.
-	 */
-	public static function ajax_filter() {
+	public static function ajax_get_allowed_ids() {
 		check_ajax_referer( self::NONCE_ACTION, 'nonce' );
 
 		$raw_filters    = isset( $_POST['filtros'] ) && is_array( $_POST['filtros'] ) ? wp_unslash( $_POST['filtros'] ) : array(); // phpcs:ignore WordPress.Security.NonceVerification.Missing
@@ -365,15 +199,41 @@ class Addon_Filtros_Hbook_Engine {
 			}
 		}
 
-		$redirection_url    = isset( $_POST['redirection_url'] ) ? esc_url_raw( wp_unslash( $_POST['redirection_url'] ) ) : '';
-		$thank_you_page_url = isset( $_POST['thank_you_page_url'] ) ? esc_url_raw( wp_unslash( $_POST['thank_you_page_url'] ) ) : '';
+		if ( empty( $selected_terms ) ) {
+			wp_send_json_success(
+				array(
+					'active' => false,
+					'ids'    => array(),
+				)
+			);
+		}
 
-		$query = self::build_query( $selected_terms );
+		$tax_query = array( 'relation' => 'AND' );
+		foreach ( $selected_terms as $taxonomy => $slugs ) {
+			$tax_query[] = array(
+				'taxonomy' => $taxonomy,
+				'field'    => 'slug',
+				'terms'    => $slugs,
+				'operator' => 'IN',
+			);
+		}
+
+		$args = array(
+			'post_type'      => ADDON_FILTROS_HBOOK_CPT,
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+			'tax_query'      => $tax_query, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
+		);
+
+		$args = apply_filters( 'addon_filtros_hbook_query_args', $args, $selected_terms );
+
+		$ids = get_posts( $args );
 
 		wp_send_json_success(
 			array(
-				'html'  => self::render_cards( $query, $redirection_url, $thank_you_page_url ),
-				'count' => (int) $query->found_posts,
+				'active' => true,
+				'ids'    => array_map( 'intval', $ids ),
 			)
 		);
 	}

@@ -65,26 +65,6 @@ function addon_filtros_hbook_get_taxonomies() {
 	return apply_filters( 'addon_filtros_hbook_taxonomies', $taxonomies );
 }
 
-/**
- * Da acceso a la instancia pública de utilidades de HBook
- * ($hbook->utils), que expone helpers ya usados por el propio HBook
- * para renderizar sus listados (get_accom_title, get_accom_link,
- * get_accom_list_desc, get_thumb_mark_up, get_strings...). $hbook se
- * instancia en el ámbito global de hbook.php, así que basta con
- * declararla global aquí.
- *
- * @return HbUtils|null
- */
-function addon_filtros_hbook_get_hbook_utils() {
-	global $hbook;
-
-	if ( is_object( $hbook ) && isset( $hbook->utils ) && is_object( $hbook->utils ) ) {
-		return $hbook->utils;
-	}
-
-	return null;
-}
-
 /* ══════════════════════════════════════════════
    ACTIVACIÓN: aviso no destructivo si falta HBook
 ══════════════════════════════════════════════ */
@@ -178,7 +158,13 @@ add_shortcode( 'addon_filtros_hbook', array( 'Addon_Filtros_Hbook_Engine', 'rend
 
 /* ══════════════════════════════════════════════
    ENDPOINT AJAX (usuarios logueados y visitantes)
+
+   Endpoint deliberadamente ligero: NO calcula disponibilidad ni
+   fechas (eso lo sigue haciendo, íntegro y sin tocar, el propio
+   [hb_booking_form] de HBook). Solo devuelve qué IDs de alojamiento
+   cumplen las características marcadas, para que el JS oculte/muestre
+   las tarjetas que HBook ya ha renderizado tras su propia búsqueda.
 ══════════════════════════════════════════════ */
 
-add_action( 'wp_ajax_addon_filtros_hbook_filter', array( 'Addon_Filtros_Hbook_Engine', 'ajax_filter' ) );
-add_action( 'wp_ajax_nopriv_addon_filtros_hbook_filter', array( 'Addon_Filtros_Hbook_Engine', 'ajax_filter' ) );
+add_action( 'wp_ajax_addon_filtros_hbook_get_allowed_ids', array( 'Addon_Filtros_Hbook_Engine', 'ajax_get_allowed_ids' ) );
+add_action( 'wp_ajax_nopriv_addon_filtros_hbook_get_allowed_ids', array( 'Addon_Filtros_Hbook_Engine', 'ajax_get_allowed_ids' ) );

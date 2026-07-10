@@ -1,15 +1,24 @@
 /**
  * Addon Filtros HBook — lógica pública.
  *
- * - Escucha el evento "change" de cada checkbox de filtro.
- * - Envía la selección al endpoint AJAX de WordPress mediante fetch().
- * - Aplica un estado de carga (opacidad + skeleton loader) mientras espera respuesta.
- * - Conecta el botón de cada tarjeta con el flujo de reserva de HBook.
+ * Importante: este script NUNCA intercepta ni modifica las peticiones
+ * AJAX de HBook (`hb_get_available_accom`, `hb_create_resa`, etc.). El
+ * buscador de fechas/personas y la creación de la reserva son 100% de
+ * HBook, sin tocar.
+ *
+ * Lo único que hace este script:
+ * 1. Cuando el usuario marca/desmarca una característica, pide al
+ *    endpoint propio del addon la lista de IDs de alojamiento que la
+ *    cumplen (sin fechas).
+ * 2. Observa el contenedor `.hb-accom-list` que HBook rellena tras su
+ *    propia búsqueda (ver HBook: `$booking_wrapper.find('.hb-accom-list').html(response.mark_up)`)
+ *    y oculta (display:none, de forma reversible) las tarjetas
+ *    (`[data-accom-id]`) que no estén en esa lista.
+ * 3. Vuelve a aplicar el filtro cada vez que HBook renderiza resultados
+ *    nuevos (nueva búsqueda de fechas), gracias a un MutationObserver.
  */
 ( function () {
 	'use strict';
-
-	var SKELETON_CARDS = 6;
 
 	document.addEventListener( 'DOMContentLoaded', function () {
 		var wrapper = document.getElementById( 'addon-filtros-wrapper' );
@@ -18,12 +27,16 @@
 		}
 
 		var form = document.getElementById( 'addon-filtros-form' );
-		var grid = document.getElementById( 'addon-filtros-grid' );
+		var resultsList = wrapper.querySelector( '.hb-accom-list' );
 		var panel = document.getElementById( 'addon-filtros-panel' );
 		var overlay = document.getElementById( 'addon-filtros-panel-overlay' );
 		var toggleBtn = document.getElementById( 'addon-filtros-toggle' );
 		var closeBtn = document.getElementById( 'addon-filtros-panel-close' );
 		var checkboxes = form ? Array.prototype.slice.call( form.querySelectorAll( 'input[type="checkbox"]' ) ) : [];
+
+		// null = sin filtro de características activo (se muestra todo lo que devuelva HBook).
+		var allowedIds = null;
+		var noMatchMessage = null;
 		var currentRequest = null;
 
 		function openPanel() {
@@ -62,47 +75,51 @@
 			overlay.addEventListener( 'click', closePanel );
 		}
 
-		checkboxes.forEach( function ( checkbox ) {
-			checkbox.addEventListener( 'change', function () {
-				fetchResults();
-			} );
-		} );
-
-		function buildSkeletonMarkup() {
-			var card =
-				'<div class="addon-filtros-skeleton-card">' +
-				'<div class="addon-filtros-skeleton-img"></div>' +
-				'<div class="addon-filtros-skeleton-body">' +
-				'<div class="addon-filtros-skeleton-line addon-filtros-skeleton-line--title"></div>' +
-				'<div class="addon-filtros-skeleton-line"></div>' +
-				'<div class="addon-filtros-skeleton-line addon-filtros-skeleton-line--btn"></div>' +
-				'</div>' +
-				'</div>';
-			return new Array( SKELETON_CARDS + 1 ).join( card );
-		}
-
-		function setLoadingState( isLoading ) {
-			if ( ! grid ) {
+		function toggleNoMatchMessage( show ) {
+			if ( ! resultsList ) {
 				return;
 			}
-			grid.classList.toggle( 'is-loading', isLoading );
-			grid.setAttribute( 'aria-busy', isLoading ? 'true' : 'false' );
-			if ( isLoading ) {
-				grid.innerHTML = buildSkeletonMarkup();
+			if ( ! noMatchMessage ) {
+				noMatchMessage = document.createElement( 'p' );
+				noMatchMessage.className = 'addon-filtros-empty';
+				noMatchMessage.textContent = window.AddonFiltrosHbook.i18n.noResults;
+			}
+			if ( show && ! noMatchMessage.isConnected ) {
+				resultsList.appendChild( noMatchMessage );
+			} else if ( ! show && noMatchMessage.isConnected ) {
+				noMatchMessage.remove();
 			}
 		}
 
-		function buildRequestBody() {
-			var params = new URLSearchParams();
-			params.append( 'action', 'addon_filtros_hbook_filter' );
-			params.append( 'nonce', window.AddonFiltrosHbook.nonce );
+		/**
+		 * Muestra/oculta las tarjetas que HBook ya tiene renderizadas en
+		 * .hb-accom-list según la lista actual de IDs permitidos.
+		 */
+		function applyCharacteristicsFilter() {
+			if ( ! resultsList ) {
+				return;
+			}
+			var cards = resultsList.querySelectorAll( '[data-accom-id]' );
+			if ( ! cards.length ) {
+				toggleNoMatchMessage( false );
+				return;
+			}
+			var visibleCount = 0;
+			cards.forEach( function ( card ) {
+				var id = parseInt( card.getAttribute( 'data-accom-id' ), 10 );
+				var matches = ( allowedIds === null ) || ( allowedIds.indexOf( id ) !== -1 );
+				card.style.display = matches ? '' : 'none';
+				if ( matches ) {
+					visibleCount++;
+				}
+			} );
+			toggleNoMatchMessage( visibleCount === 0 );
+		}
 
-			if ( wrapper.dataset.redirectionUrl ) {
-				params.append( 'redirection_url', wrapper.dataset.redirectionUrl );
-			}
-			if ( wrapper.dataset.thankYouPageUrl ) {
-				params.append( 'thank_you_page_url', wrapper.dataset.thankYouPageUrl );
-			}
+		function fetchAllowedIds() {
+			var params = new URLSearchParams();
+			params.append( 'action', 'addon_filtros_hbook_get_allowed_ids' );
+			params.append( 'nonce', window.AddonFiltrosHbook.nonce );
 
 			checkboxes.forEach( function ( checkbox ) {
 				if ( checkbox.checked ) {
@@ -110,28 +127,21 @@
 				}
 			} );
 
-			return params;
-		}
-
-		function fetchResults() {
-			if ( ! grid ) {
-				return;
-			}
-
 			if ( currentRequest ) {
 				currentRequest.abort();
 			}
-
 			var controller = new AbortController();
 			currentRequest = controller;
 
-			setLoadingState( true );
+			if ( resultsList ) {
+				resultsList.style.opacity = '0.5';
+			}
 
 			fetch( window.AddonFiltrosHbook.ajaxUrl, {
 				method: 'POST',
 				credentials: 'same-origin',
 				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body: buildRequestBody().toString(),
+				body: params.toString(),
 				signal: controller.signal,
 			} )
 				.then( function ( response ) {
@@ -142,53 +152,38 @@
 						return;
 					}
 					if ( response && response.success ) {
-						grid.innerHTML = response.data.html;
-						bindBookingButtons();
-					} else {
-						grid.innerHTML = '<p class="addon-filtros-empty">' + window.AddonFiltrosHbook.i18n.error + '</p>';
+						allowedIds = response.data.active ? response.data.ids : null;
+						applyCharacteristicsFilter();
 					}
 				} )
 				.catch( function ( error ) {
 					if ( error && error.name === 'AbortError' ) {
 						return;
 					}
-					grid.innerHTML = '<p class="addon-filtros-empty">' + window.AddonFiltrosHbook.i18n.error + '</p>';
 				} )
 				.finally( function () {
 					if ( currentRequest === controller ) {
-						grid.classList.remove( 'is-loading' );
-						grid.setAttribute( 'aria-busy', 'false' );
+						if ( resultsList ) {
+							resultsList.style.opacity = '';
+						}
 						currentRequest = null;
 					}
 				} );
 		}
 
-		/**
-		 * Conecta cada botón "Reservar" con el formulario de reserva real de
-		 * HBook que ya viene renderizado (oculto) junto a la tarjeta —
-		 * [hb_booking_form accom_id="ID"], el mismo mecanismo que usa el
-		 * propio [hb_accommodation_list book_button="yes"] de HBook. Al
-		 * pulsar el botón simplemente se despliega ese formulario, ya scopeado
-		 * a un único alojamiento, sin mostrar un segundo buscador.
-		 */
-		function bindBookingButtons() {
-			if ( ! grid ) {
-				return;
-			}
-			var buttons = grid.querySelectorAll( '.addon-filtros-book-btn' );
-			buttons.forEach( function ( button ) {
-				button.addEventListener( 'click', function () {
-					var card = button.closest( '.addon-filtros-card' );
-					var bookingForm = card ? card.querySelector( '.addon-filtros-booking-form' ) : null;
-					if ( ! bookingForm ) {
-						return;
-					}
-					var isOpen = bookingForm.classList.toggle( 'is-open' );
-					button.setAttribute( 'aria-expanded', isOpen ? 'true' : 'false' );
-				} );
-			} );
-		}
+		checkboxes.forEach( function ( checkbox ) {
+			checkbox.addEventListener( 'change', fetchAllowedIds );
+		} );
 
-		bindBookingButtons();
+		// HBook sustituye por completo el contenido de .hb-accom-list en
+		// cada búsqueda de fechas (ver accommodation-list.js/booking-form.js
+		// de HBook: `$booking_wrapper.find('.hb-accom-list').html(...)`).
+		// Reaplicamos el filtro de características cada vez que eso ocurre.
+		if ( resultsList && window.MutationObserver ) {
+			var observer = new MutationObserver( function () {
+				applyCharacteristicsFilter();
+			} );
+			observer.observe( resultsList, { childList: true } );
+		}
 	} );
 } )();
