@@ -97,6 +97,13 @@
 			params.append( 'action', 'addon_filtros_hbook_filter' );
 			params.append( 'nonce', window.AddonFiltrosHbook.nonce );
 
+			if ( wrapper.dataset.redirectionUrl ) {
+				params.append( 'redirection_url', wrapper.dataset.redirectionUrl );
+			}
+			if ( wrapper.dataset.thankYouPageUrl ) {
+				params.append( 'thank_you_page_url', wrapper.dataset.thankYouPageUrl );
+			}
+
 			checkboxes.forEach( function ( checkbox ) {
 				if ( checkbox.checked ) {
 					params.append( 'filtros[' + checkbox.dataset.taxonomy + '][]', checkbox.value );
@@ -157,15 +164,12 @@
 		}
 
 		/**
-		 * Conecta cada botón "Reservar" con el flujo de reserva de HBook.
-		 *
-		 * Por defecto redirige a la URL de la tarjeta, que ya incluye
-		 * ?reserva_directa={ID} (calculada en PHP), abriendo directamente
-		 * la confirmación de fechas/pasarela de pago del alojamiento sin
-		 * mostrar un segundo buscador.
-		 *
-		 * Si el core de HBook expone un modal nativo de reserva mediante
-		 * window.HBook.openBookingModal(id), se usa ese flujo en su lugar.
+		 * Conecta cada botón "Reservar" con el formulario de reserva real de
+		 * HBook que ya viene renderizado (oculto) junto a la tarjeta —
+		 * [hb_booking_form accom_id="ID"], el mismo mecanismo que usa el
+		 * propio [hb_accommodation_list book_button="yes"] de HBook. Al
+		 * pulsar el botón simplemente se despliega ese formulario, ya scopeado
+		 * a un único alojamiento, sin mostrar un segundo buscador.
 		 */
 		function bindBookingButtons() {
 			if ( ! grid ) {
@@ -173,16 +177,14 @@
 			}
 			var buttons = grid.querySelectorAll( '.addon-filtros-book-btn' );
 			buttons.forEach( function ( button ) {
-				button.addEventListener( 'click', function ( event ) {
-					var accommodationId = button.getAttribute( 'data-accommodation-id' );
-
-					if ( window.HBook && typeof window.HBook.openBookingModal === 'function' ) {
-						event.preventDefault();
-						window.HBook.openBookingModal( accommodationId );
+				button.addEventListener( 'click', function () {
+					var card = button.closest( '.addon-filtros-card' );
+					var bookingForm = card ? card.querySelector( '.addon-filtros-booking-form' ) : null;
+					if ( ! bookingForm ) {
 						return;
 					}
-
-					window.location.href = button.getAttribute( 'href' );
+					var isOpen = bookingForm.classList.toggle( 'is-open' );
+					button.setAttribute( 'aria-expanded', isOpen ? 'true' : 'false' );
 				} );
 			} );
 		}

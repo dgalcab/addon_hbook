@@ -34,45 +34,56 @@ require_once ADDON_FILTROS_HBOOK_PATH . 'includes/class-addon-filtros-engine.php
 
 /* ══════════════════════════════════════════════
    ABSTRACCIÓN DINÁMICA DE TAXONOMÍAS
-   Detecta qué taxonomías reales están registradas contra
-   el CPT hb_accommodation y las expone como constantes
-   globales para que el resto del addon nunca tenga que
-   adivinar el slug.
+
+   HBook, por defecto, registra el CPT hb_accommodation SIN ninguna
+   taxonomía asociada (ver accom-post-type.php: 'taxonomies' =>
+   apply_filters( 'hb_accommodation_taxonomies', array() ) ). Ese es
+   precisamente el punto de extensión oficial que HBook ofrece: el
+   propio sitio (tema, functions.php o un mu-plugin) debe registrar
+   sus taxonomías reales (p.ej. "comodidades", "vistas", etc.) y
+   añadirlas mediante ese filtro.
+
+   Por tanto el addon NUNCA debe adivinar un slug de taxonomía: en su
+   lugar enumera, en tiempo real, todas las taxonomías que estén
+   efectivamente asociadas al CPT en ese momento y genera un grupo de
+   filtro por cada una.
 ══════════════════════════════════════════════ */
 
 /**
- * Recorre una lista de slugs candidatos y devuelve el primero que
- * exista como taxonomía y esté realmente asociado al CPT del addon.
+ * Devuelve los slugs de todas las taxonomías públicas realmente
+ * registradas contra hb_accommodation en el sitio actual.
  *
- * @param string[] $candidates Slugs candidatos, en orden de prioridad.
- * @return string Slug de la taxonomía detectada, o cadena vacía si ninguna aplica.
+ * @return string[]
  */
-function addon_filtros_hbook_detect_taxonomy( array $candidates ) {
-	$registered = get_object_taxonomies( ADDON_FILTROS_HBOOK_CPT );
+function addon_filtros_hbook_get_taxonomies() {
+	$taxonomies = get_object_taxonomies( ADDON_FILTROS_HBOOK_CPT, 'names' );
 
-	foreach ( $candidates as $candidate ) {
-		if ( taxonomy_exists( $candidate ) && in_array( $candidate, $registered, true ) ) {
-			return $candidate;
-		}
-	}
-
-	return '';
+	/**
+	 * Permite restringir o reordenar qué taxonomías se muestran como
+	 * filtros, sin tener que tocar el código del addon.
+	 */
+	return apply_filters( 'addon_filtros_hbook_taxonomies', $taxonomies );
 }
 
 /**
- * Define las constantes de taxonomía una vez que todos los CPT y
- * taxonomías (HBook, tema, etc.) ya están registrados en 'init'.
+ * Da acceso a la instancia pública de utilidades de HBook
+ * ($hbook->utils), que expone helpers ya usados por el propio HBook
+ * para renderizar sus listados (get_accom_title, get_accom_link,
+ * get_accom_list_desc, get_thumb_mark_up, get_strings...). $hbook se
+ * instancia en el ámbito global de hbook.php, así que basta con
+ * declararla global aquí.
+ *
+ * @return HbUtils|null
  */
-function addon_filtros_hbook_bootstrap_taxonomies() {
-	if ( ! defined( 'ADDON_FILTROS_HBOOK_TAX_CAT' ) ) {
-		define( 'ADDON_FILTROS_HBOOK_TAX_CAT', addon_filtros_hbook_detect_taxonomy( array( 'accommodation_cat', 'category' ) ) );
+function addon_filtros_hbook_get_hbook_utils() {
+	global $hbook;
+
+	if ( is_object( $hbook ) && isset( $hbook->utils ) && is_object( $hbook->utils ) ) {
+		return $hbook->utils;
 	}
 
-	if ( ! defined( 'ADDON_FILTROS_HBOOK_TAX_TAG' ) ) {
-		define( 'ADDON_FILTROS_HBOOK_TAX_TAG', addon_filtros_hbook_detect_taxonomy( array( 'accommodation_tag', 'post_tag' ) ) );
-	}
+	return null;
 }
-add_action( 'init', 'addon_filtros_hbook_bootstrap_taxonomies', 20 );
 
 /* ══════════════════════════════════════════════
    ACTIVACIÓN: aviso no destructivo si falta HBook
@@ -94,6 +105,14 @@ function addon_filtros_hbook_admin_notices() {
 		printf(
 			'<div class="notice notice-warning is-dismissible"><p>%s</p></div>',
 			esc_html__( 'Addon Filtros HBook: no se ha detectado el Custom Post Type "hb_accommodation". Instala y activa HBook antes de usar el shortcode [addon_filtros_hbook]. El addon permanecerá inactivo hasta entonces.', 'addon-filtros-hbook' )
+		);
+		return;
+	}
+
+	if ( empty( addon_filtros_hbook_get_taxonomies() ) ) {
+		printf(
+			'<div class="notice notice-info is-dismissible"><p>%s</p></div>',
+			esc_html__( 'Addon Filtros HBook: HBook no tiene ninguna taxonomía registrada para "hb_accommodation" todavía. El shortcode [addon_filtros_hbook] funcionará como listado sin filtros hasta que registres una taxonomía de características y la añadas con el filtro hb_accommodation_taxonomies de HBook.', 'addon-filtros-hbook' )
 		);
 	}
 }

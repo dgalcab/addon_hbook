@@ -329,13 +329,21 @@
 	white-space: nowrap;
 }
 
+.addon-filtros-card-desc {
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--addon-text-muted);
+}
+
 .addon-filtros-book-btn {
 	margin-top: auto;
+	width: 100%;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
 	background: var(--addon-accent);
 	color: var(--addon-text-on-accent);
+	font-family: inherit;
 	font-weight: 600;
 	font-size: 15px;
 	text-decoration: none;
@@ -357,6 +365,23 @@
 .addon-filtros-book-btn:focus-visible {
 	outline: 2px solid var(--addon-text);
 	outline-offset: 2px;
+}
+
+/* Formulario de reserva real de HBook ([hb_booking_form]), oculto hasta
+   que se pulsa "Reservar" en la tarjeta. */
+.addon-filtros-booking-form {
+	display: none;
+	margin-top: 12px;
+}
+
+.addon-filtros-booking-form.is-open {
+	display: block;
+}
+
+.addon-filtros-no-taxonomies {
+	color: var(--addon-text-muted);
+	font-size: 14px;
+	margin: 0;
 }
 
 /* ══════════════════════════════════════════════
