@@ -175,25 +175,19 @@
 ══════════════════════════════════════════════ */
 
 /*
- * !important es necesario aquí: HBook muestra este contenedor con
- * jQuery .slideDown(), que escribe "display: block" como estilo INLINE
- * en el propio elemento tras la animación. Un estilo inline gana
- * siempre a cualquier regla de hoja de estilos externa, por eso una
- * regla normal (por específica que sea) no basta para convertirlo en grid.
+ * .hb-accom-list en sí no necesita ser grid: HBook lo muestra con
+ * jQuery .slideDown() (que dejará "display: block" inline tras la
+ * animación, y eso está bien). Solo se le da separación visual, y se
+ * mantiene oculto mientras esté vacío (con !important porque una
+ * animación previa puede haber dejado un display inline).
  */
 #addon-filtros-wrapper .hb-accom-list {
-	display: grid !important;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-	gap: 24px;
 	margin-top: 28px;
 	padding-top: 28px;
 	border-top: 1px solid var(--addon-border);
 	transition: opacity 0.2s ease;
 }
 
-/* Antes de la primera búsqueda (o sin resultados) el contenedor está
-   vacío: debe quedarse oculto, igual que en el estado original de HBook,
-   en vez de mostrarse como una caja de grid vacía con su línea superior. */
 #addon-filtros-wrapper .hb-accom-list:empty {
 	display: none !important;
 	margin-top: 0;
@@ -201,9 +195,40 @@
 	border-top: none;
 }
 
+/*
+ * El grid de tarjetas va aquí, en .hb-multi-accom-choices: es el
+ * contenedor DIRECTO de cada .hb-accom (verificado en
+ * available-accom.php de HBook: .hb-accom-list > .hb-accom-step-wrapper
+ * > .hb-multi-accom-choices > .hb-accom, tres niveles). Un intento
+ * anterior aplicaba el grid a .hb-accom-list, que solo tiene UN hijo
+ * directo (.hb-accom-step-wrapper), así que no tenía ningún efecto real
+ * sobre la disposición de las tarjetas — por eso seguían viéndose en
+ * una sola columna.
+ *
+ * !important: este sitio ya tiene un CSS personalizado (vía WPCode) que
+ * declara .hb-multi-accom-choices como flex con flex-wrap y .hb-accom
+ * con flex-basis calc(33.333% - 16px) — en teoría también da 3 columnas,
+ * pero para no depender de cómo interactúe con "align-items: center" en
+ * .hb-accom-step-wrapper (que puede encoger el ancho de sus hijos), este
+ * grid gana siempre y sustituye a esa disposición.
+ */
+#addon-filtros-wrapper .hb-accom-step-wrapper {
+	display: block !important;
+	width: 100% !important;
+}
+
+#addon-filtros-wrapper .hb-multi-accom-choices {
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+	gap: 24px !important;
+	width: 100% !important;
+}
+
 /* Cada resultado de HBook (<div class="hb-accom hb-accom-id-X" data-accom-id="X">) */
-#addon-filtros-wrapper .hb-accom-list .hb-accom {
+#addon-filtros-wrapper .hb-multi-accom-choices .hb-accom {
 	display: flex;
+	flex: none !important;
+	width: auto !important;
 	flex-direction: column;
 	background: var(--addon-surface);
 	border: 1px solid var(--addon-border);
@@ -214,7 +239,7 @@
 	transition: box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-#addon-filtros-wrapper .hb-accom-list .hb-accom:hover {
+#addon-filtros-wrapper .hb-multi-accom-choices .hb-accom:hover {
 	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
 	transform: translateY(-2px);
 }
