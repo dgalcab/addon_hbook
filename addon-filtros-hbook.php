@@ -100,16 +100,27 @@ function addon_filtros_hbook_register_default_taxonomy() {
 		ADDON_FILTROS_HBOOK_CPT,
 		array(
 			'labels'            => array(
-				'name'          => __( 'Características', 'addon-filtros-hbook' ),
-				'singular_name' => __( 'Característica', 'addon-filtros-hbook' ),
-				'menu_name'     => __( 'Características', 'addon-filtros-hbook' ),
-				'search_items'  => __( 'Buscar características', 'addon-filtros-hbook' ),
-				'all_items'     => __( 'Todas las características', 'addon-filtros-hbook' ),
-				'edit_item'     => __( 'Editar característica', 'addon-filtros-hbook' ),
-				'add_new_item'  => __( 'Añadir nueva característica', 'addon-filtros-hbook' ),
-				'new_item_name' => __( 'Nombre de la nueva característica', 'addon-filtros-hbook' ),
+				'name'               => __( 'Características', 'addon-filtros-hbook' ),
+				'singular_name'      => __( 'Característica', 'addon-filtros-hbook' ),
+				'menu_name'          => __( 'Características', 'addon-filtros-hbook' ),
+				'search_items'       => __( 'Buscar características', 'addon-filtros-hbook' ),
+				'all_items'          => __( 'Todas las características', 'addon-filtros-hbook' ),
+				'edit_item'          => __( 'Editar característica', 'addon-filtros-hbook' ),
+				'add_new_item'       => __( 'Añadir nueva característica', 'addon-filtros-hbook' ),
+				'new_item_name'      => __( 'Nombre de la nueva característica', 'addon-filtros-hbook' ),
+				'parent_item'        => __( 'Característica padre', 'addon-filtros-hbook' ),
+				'parent_item_colon'  => __( 'Característica padre:', 'addon-filtros-hbook' ),
 			),
-			'hierarchical'       => false,
+			/*
+			 * true (jerárquica) es intencional: es lo que hace que WordPress
+			 * muestre CHECKBOXES de los términos ya creados en el editor de
+			 * cada alojamiento (como "Categorías"), en vez del cuadro de
+			 * texto libre tipo "tags" que se usa con hierarchical => false
+			 * (como "Etiquetas"). No es necesario crear ninguna jerarquía
+			 * real: se puede usar como una simple lista plana de checkboxes,
+			 * dejando el campo "característica padre" vacío en todos los términos.
+			 */
+			'hierarchical'       => true,
 			'public'             => true,
 			'show_ui'            => true,
 			'show_admin_column'  => true,

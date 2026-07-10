@@ -38,7 +38,9 @@ En ningún momento se interceptan las peticiones AJAX de HBook (`hb_get_availabl
 
 HBook, por defecto, no trae ninguna taxonomía asociada a `hb_accommodation` (verificado en `accom-post-type/accom-post-type.php`: `'taxonomies' => apply_filters('hb_accommodation_taxonomies', array())`, vacío). Para que el addon funcione nada más activarlo, él mismo registra su propia taxonomía **"Características"** (`accommodation_amenity`) asociada a `hb_accommodation`.
 
-No hay que tocar ningún código: en **WordPress Admin → Alojamiento → Características** creas los términos que quieras (Piscina, Admite mascotas, Wifi, Jacuzzi...), y en la pantalla de edición de cada alojamiento los marcas con checkboxes, igual que las etiquetas de una entrada del blog. El addon los detecta automáticamente (`get_object_taxonomies('hb_accommodation')`) y genera el panel de filtros solo.
+No hay que tocar ningún código: en **WordPress Admin → Alojamiento → Características** creas los términos que quieras (Piscina, Admite mascotas, Wifi, Jacuzzi...), y en la pantalla de edición de cada alojamiento los marcas con checkboxes, igual que las **categorías** de una entrada del blog. El addon los detecta automáticamente (`get_object_taxonomies('hb_accommodation')`) y genera el panel de filtros solo.
+
+La taxonomía se registra con `'hierarchical' => true`: es lo que hace que WordPress muestre checkboxes de los términos ya creados en el editor, en vez del cuadro de texto libre tipo "tags" que usan las taxonomías no jerárquicas (como las Etiquetas de un post). No hace falta crear ninguna jerarquía real: se puede dejar como una simple lista plana, sin asignar "característica padre" a ningún término.
 
 Si ya tienes tu propia taxonomía de características (o varias) y no quieres la de serie, desactívala con:
 
@@ -46,13 +48,13 @@ Si ya tienes tu propia taxonomía de características (o varias) y no quieres la
 add_filter( 'addon_filtros_hbook_enable_default_taxonomy', '__return_false' );
 ```
 
-y registra la tuya como cualquier taxonomía de WordPress, asociándola al post type `hb_accommodation`:
+y registra la tuya como cualquier taxonomía de WordPress, asociándola al post type `hb_accommodation` (usa `'hierarchical' => true` si quieres checkboxes en el editor en vez del cuadro de texto libre):
 
 ```php
 add_action( 'init', function () {
     register_taxonomy( 'mi_taxonomia', 'hb_accommodation', array(
         'label'        => 'Mis características',
-        'hierarchical' => false,
+        'hierarchical' => true,
         'show_in_rest' => true,
     ) );
 } );
