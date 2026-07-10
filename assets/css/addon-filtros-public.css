@@ -191,16 +191,26 @@
 }
 
 /* Contenedor de resultados de HBook: lo convertimos en grid responsive */
+/*
+ * !important es necesario aquí: HBook muestra este contenedor con
+ * jQuery .slideDown(), que escribe "display: block" como estilo INLINE
+ * en el propio elemento tras la animación. Un estilo inline gana
+ * siempre a cualquier regla de hoja de estilos externa, por eso una
+ * regla normal (por específica que sea) no basta para convertirlo en grid.
+ */
 #addon-filtros-wrapper .hb-accom-list {
-	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+	display: grid !important;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 	gap: 24px;
 	margin-top: 24px;
 	transition: opacity 0.2s ease;
 }
 
+/* Antes de la primera búsqueda (o sin resultados) el contenedor está
+   vacío: debe quedarse oculto, igual que en el estado original de HBook,
+   en vez de mostrarse como una caja de grid vacía. */
 #addon-filtros-wrapper .hb-accom-list:empty {
-	display: block;
+	display: none !important;
 	margin-top: 0;
 }
 
