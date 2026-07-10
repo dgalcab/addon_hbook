@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.4
+
+- Tras aterrizar en la página del alojamiento con las fechas ya rellenadas y la búsqueda lanzada, el script se paraba en el paso 1 ("alojamiento seleccionado") sin avanzar al paso 2 ("servicios adicionales"). En una página de un único alojamiento, HBook autoselecciona ese resultado solo, pero sigue haciendo falta pulsar su botón "Siguiente" (`.hb-next-step-1`) para continuar — ahora el script espera (la búsqueda es AJAX) a que ese botón esté visible y lo pulsa automáticamente, igual que haría el visitante.
+
 ## 2.0.3
 
 - El botón "Reservar" enlazaba siempre al permalink del propio `hb_accommodation`, pero HBook permite configurar, por alojamiento, que la página pública real sea OTRA (meta `accom_default_page`/`accom_linked_page`, editable en el propio metabox de HBook) — típico en sitios que tienen un CPT aparte (p.ej. "Casas") para el contenido público, separado del alojamiento técnico de HBook. Ahora se replica esa misma lógica (`addon_filtros_hbook_get_accom_link()`) para enlazar siempre a la página correcta.

@@ -20,6 +20,14 @@
  *    de HBook, líneas 651-684).
  * 4. Rellena adultos/niños si se han indicado.
  * 5. Pulsa el botón "Buscar" real de HBook.
+ * 6. Espera a que aparezca el resultado (la búsqueda es AJAX) y, como en
+ *    una página de un único alojamiento solo hay un resultado posible,
+ *    HBook lo autoselecciona solo (ver booking-form.js de HBook,
+ *    search_show_response(): cuando .hb-multi-accom-choices tiene un
+ *    único .hb-accom, llama a set_selected_accom() automáticamente).
+ *    Lo único que falta es pulsar el botón "Siguiente" (.hb-next-step-1)
+ *    para pasar al paso de servicios adicionales — este script lo hace
+ *    por el visitante, tal cual haría él.
  *
  * No se reimplementa ni se sustituye ninguna lógica de HBook: solo se
  * simulan las mismas acciones que haría un visitante con el teclado y el
@@ -104,6 +112,36 @@
 			}
 
 			submitButton.click();
+			advanceToNextStep();
+		}
+
+		/**
+		 * Tras pulsar "Buscar", la búsqueda es AJAX: espera (con reintentos)
+		 * a que aparezca y esté visible el botón "Siguiente" del paso 1
+		 * (.hb-next-step-1), y lo pulsa — igual que haría el visitante tras
+		 * ver que su único alojamiento ya está seleccionado. Si tras el
+		 * margen de espera no aparece visible (p. ej. porque la búsqueda no
+		 * ha encontrado disponibilidad, o hay más de un resultado y hace
+		 * falta elegir a mano), no se fuerza nada: el visitante se queda en
+		 * el paso 1 con la búsqueda ya hecha, que sigue siendo mejor que
+		 * tener que repetirla desde cero.
+		 */
+		function advanceToNextStep( attempt ) {
+			attempt = attempt || 0;
+
+			var nextStepButton = document.querySelector( '.hb-next-step-1 input[type="submit"]' );
+			var isVisible = nextStepButton && nextStepButton.offsetParent !== null;
+
+			if ( ! isVisible ) {
+				if ( attempt < MAX_ATTEMPTS ) {
+					setTimeout( function () {
+						advanceToNextStep( attempt + 1 );
+					}, RETRY_DELAY_MS );
+				}
+				return;
+			}
+
+			nextStepButton.click();
 		}
 
 		fillAndSearch();
