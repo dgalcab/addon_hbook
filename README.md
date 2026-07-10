@@ -34,40 +34,31 @@ Esto es importante y está verificado directamente contra el código fuente de H
 
 En ningún momento se interceptan las peticiones AJAX de HBook (`hb_get_available_accom`, `hb_create_resa`...) ni se modifica el HTML que devuelven: solo se restyla vía CSS scopeado y se oculta/muestra vía JS.
 
-## Importante: HBook no trae taxonomías de características por defecto
+## Taxonomía "Características" — funciona de serie, sin escribir código
 
-Verificado en `accom-post-type/accom-post-type.php` de HBook:
+HBook, por defecto, no trae ninguna taxonomía asociada a `hb_accommodation` (verificado en `accom-post-type/accom-post-type.php`: `'taxonomies' => apply_filters('hb_accommodation_taxonomies', array())`, vacío). Para que el addon funcione nada más activarlo, él mismo registra su propia taxonomía **"Características"** (`accommodation_amenity`) asociada a `hb_accommodation`.
+
+No hay que tocar ningún código: en **WordPress Admin → Alojamiento → Características** creas los términos que quieras (Piscina, Admite mascotas, Wifi, Jacuzzi...), y en la pantalla de edición de cada alojamiento los marcas con checkboxes, igual que las etiquetas de una entrada del blog. El addon los detecta automáticamente (`get_object_taxonomies('hb_accommodation')`) y genera el panel de filtros solo.
+
+Si ya tienes tu propia taxonomía de características (o varias) y no quieres la de serie, desactívala con:
 
 ```php
-register_post_type( 'hb_accommodation', array(
-    // ...
-    'taxonomies' => apply_filters( 'hb_accommodation_taxonomies', array() ),
-) );
+add_filter( 'addon_filtros_hbook_enable_default_taxonomy', '__return_false' );
 ```
 
-Por defecto `hb_accommodation` no tiene ninguna taxonomía asociada. Este addon **no adivina** slugs: en cada render enumera dinámicamente (`get_object_taxonomies('hb_accommodation')`) las taxonomías realmente registradas y genera un grupo de checkboxes por cada una. Si no hay ninguna, el panel muestra un aviso en vez de una UI vacía.
-
-### Cómo dar de alta "Piscina", "Admite mascotas", etc.
-
-En el `functions.php` del tema (o en un mu-plugin):
+y registra la tuya como cualquier taxonomía de WordPress, asociándola al post type `hb_accommodation`:
 
 ```php
 add_action( 'init', function () {
-    register_taxonomy( 'accommodation_amenity', 'hb_accommodation', array(
-        'label'        => 'Características',
+    register_taxonomy( 'mi_taxonomia', 'hb_accommodation', array(
+        'label'        => 'Mis características',
         'hierarchical' => false,
         'show_in_rest' => true,
-        'rewrite'      => array( 'slug' => 'caracteristica' ),
     ) );
-}, 5 ); // antes de que HBook registre el CPT (prioridad por defecto 10)
-
-add_filter( 'hb_accommodation_taxonomies', function ( $taxonomies ) {
-    $taxonomies[] = 'accommodation_amenity';
-    return $taxonomies;
 } );
 ```
 
-Después, en **WordPress Admin → Alojamiento**, edita cada `hb_accommodation` y marca sus características desde el nuevo cuadro que aparece en el editor (igual que las etiquetas de una entrada). El addon las detecta solo, sin tocar su código.
+El addon soporta cualquier número de taxonomías asociadas al CPT: genera un grupo de filtro por cada una que tenga términos.
 
 ## Shortcode
 

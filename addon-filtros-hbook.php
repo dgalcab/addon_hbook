@@ -66,6 +66,62 @@ function addon_filtros_hbook_get_taxonomies() {
 }
 
 /* ══════════════════════════════════════════════
+   TAXONOMÍA "CARACTERÍSTICAS" DE SERIE
+
+   Para que el addon funcione nada más activarlo, sin necesidad de
+   escribir código, se registra aquí mismo una taxonomía propia
+   ("accommodation_amenity") asociada a hb_accommodation, usando el
+   mecanismo estándar de WordPress (register_taxonomy con el CPT como
+   object_type), que funciona con independencia del orden de carga
+   entre plugins. El administrador solo tiene que ir a
+   WordPress Admin → Alojamiento → Características para crear términos
+   (Piscina, Admite mascotas, etc.) y asignarlos a cada alojamiento,
+   exactamente igual que con las etiquetas de una entrada.
+
+   Si el sitio ya gestiona sus propias taxonomías de características
+   (una o varias) y no quiere esta de serie, se puede desactivar con:
+   add_filter( 'addon_filtros_hbook_enable_default_taxonomy', '__return_false' );
+══════════════════════════════════════════════ */
+
+define( 'ADDON_FILTROS_HBOOK_DEFAULT_TAXONOMY', 'accommodation_amenity' );
+
+function addon_filtros_hbook_register_default_taxonomy() {
+	if ( ! apply_filters( 'addon_filtros_hbook_enable_default_taxonomy', true ) ) {
+		return;
+	}
+
+	// Si el sitio ya define una taxonomía con este slug, se respeta y no se sobrescribe.
+	if ( taxonomy_exists( ADDON_FILTROS_HBOOK_DEFAULT_TAXONOMY ) ) {
+		return;
+	}
+
+	register_taxonomy(
+		ADDON_FILTROS_HBOOK_DEFAULT_TAXONOMY,
+		ADDON_FILTROS_HBOOK_CPT,
+		array(
+			'labels'            => array(
+				'name'          => __( 'Características', 'addon-filtros-hbook' ),
+				'singular_name' => __( 'Característica', 'addon-filtros-hbook' ),
+				'menu_name'     => __( 'Características', 'addon-filtros-hbook' ),
+				'search_items'  => __( 'Buscar características', 'addon-filtros-hbook' ),
+				'all_items'     => __( 'Todas las características', 'addon-filtros-hbook' ),
+				'edit_item'     => __( 'Editar característica', 'addon-filtros-hbook' ),
+				'add_new_item'  => __( 'Añadir nueva característica', 'addon-filtros-hbook' ),
+				'new_item_name' => __( 'Nombre de la nueva característica', 'addon-filtros-hbook' ),
+			),
+			'hierarchical'       => false,
+			'public'             => true,
+			'show_ui'            => true,
+			'show_admin_column'  => true,
+			'show_in_quick_edit' => true,
+			'show_in_rest'       => true,
+			'rewrite'            => array( 'slug' => 'caracteristica' ),
+		)
+	);
+}
+add_action( 'init', 'addon_filtros_hbook_register_default_taxonomy', 5 );
+
+/* ══════════════════════════════════════════════
    ACTIVACIÓN: aviso no destructivo si falta HBook
 ══════════════════════════════════════════════ */
 
@@ -92,7 +148,7 @@ function addon_filtros_hbook_admin_notices() {
 	if ( empty( addon_filtros_hbook_get_taxonomies() ) ) {
 		printf(
 			'<div class="notice notice-info is-dismissible"><p>%s</p></div>',
-			esc_html__( 'Addon Filtros HBook: HBook no tiene ninguna taxonomía registrada para "hb_accommodation" todavía. El shortcode [addon_filtros_hbook] funcionará como listado sin filtros hasta que registres una taxonomía de características y la añadas con el filtro hb_accommodation_taxonomies de HBook.', 'addon-filtros-hbook' )
+			esc_html__( 'Addon Filtros HBook: todavía no hay ninguna característica creada. Ve a Alojamiento → Características para crear las tuyas (Piscina, Admite mascotas...) y asígnalas a cada alojamiento. Mientras tanto, el shortcode [addon_filtros_hbook] mostrará el buscador de HBook sin panel de filtros.', 'addon-filtros-hbook' )
 		);
 	}
 }
