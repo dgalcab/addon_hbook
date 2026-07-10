@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.3
+
+- El botón "Reservar" enlazaba siempre al permalink del propio `hb_accommodation`, pero HBook permite configurar, por alojamiento, que la página pública real sea OTRA (meta `accom_default_page`/`accom_linked_page`, editable en el propio metabox de HBook) — típico en sitios que tienen un CPT aparte (p.ej. "Casas") para el contenido público, separado del alojamiento técnico de HBook. Ahora se replica esa misma lógica (`addon_filtros_hbook_get_accom_link()`) para enlazar siempre a la página correcta.
+- El script de autorrelleno en la página de destino ya no depende de que esa página sea de tipo `hb_accommodation` (podía no cargarse si el CPT real de destino era otro, como "Casas"): ahora se activa simplemente cuando la URL trae los parámetros `addon_checkin`/`addon_checkout`, sea cual sea el tipo de contenido de la página.
+
 ## 2.0.2
 
 - El botón "Reservar" navegaba a la home en vez de a la casa: la URL llevaba las fechas en formato local con barras (`12%2F10%2F2026`), y muchos hostings/firewalls bloquean o redirigen peticiones con barras codificadas repetidas en la query string. Ahora las fechas viajan en formato ISO (`2026-10-12`, sin barras) y se reconvierten al formato local del sitio al aterrizar en la página del alojamiento, usando la propia utilidad de fechas de HBook (`$.datepick.parseDate`/`formatDate`) en ambos lados — sin necesidad de adivinar el formato configurado.

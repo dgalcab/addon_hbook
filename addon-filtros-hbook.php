@@ -3,7 +3,7 @@
  * Plugin Name:       Addon Filtros HBook
  * Plugin URI:        https://github.com/dgalcab/addon_hbook
  * Description:       Addon independiente que añade un buscador de alojamientos con filtros combinables por AJAX para el Custom Post Type "hb_accommodation" de HBook. Shortcode: [addon_filtros_hbook].
- * Version:           2.0.2
+ * Version:           2.0.3
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            La Casa del Torero
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
    CONSTANTES DEL ADDON
 ══════════════════════════════════════════════ */
 
-define( 'ADDON_FILTROS_HBOOK_VERSION', '2.0.2' );
+define( 'ADDON_FILTROS_HBOOK_VERSION', '2.0.3' );
 define( 'ADDON_FILTROS_HBOOK_FILE', __FILE__ );
 define( 'ADDON_FILTROS_HBOOK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ADDON_FILTROS_HBOOK_URL', plugin_dir_url( __FILE__ ) );
@@ -173,11 +173,38 @@ add_action( 'admin_notices', 'addon_filtros_hbook_admin_notices' );
 ══════════════════════════════════════════════ */
 
 /**
+ * Replica la lógica de HBook (HbUtils::get_accom_link(), en utils/utils.php)
+ * para resolver la página real de un alojamiento: HBook permite configurar,
+ * por cada hb_accommodation, "usar este post para mostrar el alojamiento"
+ * o "usar otra página" (meta 'accom_default_page' / 'accom_linked_page',
+ * editable en el propio metabox de HBook en el editor del alojamiento).
+ * Esto es exactamente lo que hace falta cuando el sitio tiene, además del
+ * CPT de HBook, otro tipo de contenido (p.ej. un CPT "Casas") con la
+ * página pública real de cada alojamiento: el permalink del propio
+ * hb_accommodation puede no ser la página que el visitante debe ver.
+ *
+ * @param int $accom_id
+ * @return string
+ */
+function addon_filtros_hbook_get_accom_link( $accom_id ) {
+	$target_id = $accom_id;
+
+	if ( get_post_meta( $accom_id, 'accom_default_page', true ) === 'no' ) {
+		$linked_page_id = (int) get_post_meta( $accom_id, 'accom_linked_page', true );
+		if ( $linked_page_id ) {
+			$target_id = $linked_page_id;
+		}
+	}
+
+	return get_permalink( $target_id );
+}
+
+/**
  * Datos de cada alojamiento que el JS necesita para enriquecer las
  * tarjetas sin inventar nada: sus características ya asignadas
- * (badges) y su permalink real (para el botón "Reservar", que navega
- * a la página propia del alojamiento). Una sola consulta, calculada
- * solo cuando el shortcode realmente se va a usar.
+ * (badges) y el enlace real a su página pública (para el botón
+ * "Reservar" — ver addon_filtros_hbook_get_accom_link()). Una sola
+ * consulta, calculada solo cuando el shortcode realmente se va a usar.
  *
  * @return array{ badges: array<int, string[]>, links: array<int, string> }
  */
@@ -197,7 +224,7 @@ function addon_filtros_hbook_get_accom_data() {
 	$links  = array();
 
 	foreach ( $post_ids as $post_id ) {
-		$links[ $post_id ] = get_permalink( $post_id );
+		$links[ $post_id ] = addon_filtros_hbook_get_accom_link( $post_id );
 
 		$names = array();
 		foreach ( $taxonomies as $taxonomy ) {
@@ -274,17 +301,23 @@ add_action( 'wp_enqueue_scripts', 'addon_filtros_hbook_enqueue_assets' );
 /* ══════════════════════════════════════════════
    PÁGINA PROPIA DE CADA ALOJAMIENTO
 
-   El botón "Reservar" de cada tarjeta enlaza a la página del propio
-   hb_accommodation (donde el sitio ya tiene incrustado su propio
-   [hb_booking_form accom_id="X"]) añadiendo las fechas/personas
-   elegidas como parámetros de URL. Este script, que solo se carga en
-   esas páginas individuales, rellena esos mismos campos del formulario
-   real de HBook (tal y como lo haría el visitante) y lanza la búsqueda
-   automáticamente, para no repetir nada.
+   El botón "Reservar" de cada tarjeta enlaza a la página pública real
+   del alojamiento (ver addon_filtros_hbook_get_accom_link(): respeta si
+   HBook está configurado para mostrarlo en OTRO tipo de contenido, p.ej.
+   un CPT "Casas" distinto de "Alojamiento"/hb_accommodation), añadiendo
+   las fechas/personas elegidas como parámetros de URL. Este script
+   rellena esos mismos campos del formulario real de HBook (tal y como lo
+   haría el visitante) y lanza la búsqueda automáticamente.
+
+   Como esa página de destino puede ser de CUALQUIER tipo de contenido
+   (no necesariamente hb_accommodation), no se puede usar is_singular()
+   para decidir cuándo cargar el script. En su lugar se comprueba
+   directamente la señal real: que la URL traiga los parámetros que solo
+   añade el propio botón "Reservar" de este addon.
 ══════════════════════════════════════════════ */
 
 function addon_filtros_hbook_enqueue_accom_page_assets() {
-	if ( ! is_singular( ADDON_FILTROS_HBOOK_CPT ) ) {
+	if ( ! isset( $_GET['addon_checkin'] ) && ! isset( $_GET['addon_checkout'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return;
 	}
 
