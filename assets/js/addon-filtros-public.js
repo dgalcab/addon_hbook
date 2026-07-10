@@ -125,6 +125,33 @@
 		}
 
 		/**
+		 * Convierte una fecha en el formato local de HBook (p.ej. "12/10/2026")
+		 * a ISO "aaaa-mm-dd", usando la propia utilidad de HBook
+		 * ($.datepick.parseDate, ya cargada en la página junto al buscador),
+		 * para no tener que adivinar el separador de fecha del sitio.
+		 *
+		 * Importante: el ISO no lleva barras ("/"). Muchos hostings/firewalls
+		 * de WordPress bloquean o redirigen a la home las peticiones cuyas
+		 * URL contienen barras codificadas (%2F) repetidas en la query string
+		 * — justo lo que pasaba al mandar la fecha tal cual con su formato
+		 * local (12%2F10%2F2026). El ISO evita ese problema de raíz.
+		 */
+		function toIsoDate( value ) {
+			if ( ! value || typeof window.jQuery === 'undefined' || ! window.jQuery.datepick || typeof window.hb_date_format === 'undefined' ) {
+				return value;
+			}
+			try {
+				var parsed = window.jQuery.datepick.parseDate( window.hb_date_format, value );
+				var y = parsed.getFullYear();
+				var m = ( '0' + ( parsed.getMonth() + 1 ) ).slice( -2 );
+				var d = ( '0' + parsed.getDate() ).slice( -2 );
+				return y + '-' + m + '-' + d;
+			} catch ( e ) {
+				return value;
+			}
+		}
+
+		/**
 		 * Añade a cada tarjeta un botón "Reservar" propio que enlaza a la
 		 * página real del alojamiento (AddonFiltrosHbook.linksMap), con las
 		 * fechas/personas de la búsqueda ACTUAL (leídas de los campos reales
@@ -156,10 +183,10 @@
 					return;
 				}
 				if ( checkInField && checkInField.value ) {
-					url.searchParams.set( 'addon_checkin', checkInField.value );
+					url.searchParams.set( 'addon_checkin', toIsoDate( checkInField.value ) );
 				}
 				if ( checkOutField && checkOutField.value ) {
-					url.searchParams.set( 'addon_checkout', checkOutField.value );
+					url.searchParams.set( 'addon_checkout', toIsoDate( checkOutField.value ) );
 				}
 				if ( adultsField && adultsField.value ) {
 					url.searchParams.set( 'addon_adults', adultsField.value );

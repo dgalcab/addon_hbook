@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+
+- El botón "Reservar" navegaba a la home en vez de a la casa: la URL llevaba las fechas en formato local con barras (`12%2F10%2F2026`), y muchos hostings/firewalls bloquean o redirigen peticiones con barras codificadas repetidas en la query string. Ahora las fechas viajan en formato ISO (`2026-10-12`, sin barras) y se reconvierten al formato local del sitio al aterrizar en la página del alojamiento, usando la propia utilidad de fechas de HBook (`$.datepick.parseDate`/`formatDate`) en ambos lados — sin necesidad de adivinar el formato configurado.
+
 ## 2.0.1
 
 - Corrige el grid de tarjetas de resultado: el CSS apuntaba a `.hb-accom-list`, pero cada `.hb-accom` en realidad cuelga de `.hb-multi-accom-choices` (dos niveles más adentro), así que el grid no tenía ningún efecto y las tarjetas seguían apilándose en una columna. Corregido apuntando al contenedor correcto, con más especificidad que el CSS personalizado que ya hubiera en el sitio.
