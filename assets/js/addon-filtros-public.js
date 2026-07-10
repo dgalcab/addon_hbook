@@ -17,8 +17,15 @@
  * 3. Inyecta badges informativos (las características de cada alojamiento)
  *    en cada tarjeta, a partir de datos ya asignados en WordPress
  *    (AddonFiltrosHbook.badgesMap), sin inventar nada.
- * 4. Vuelve a aplicar ambas cosas cada vez que HBook renderiza resultados
- *    nuevos (nueva búsqueda de fechas), gracias a un MutationObserver.
+ * 4. Añade a cada tarjeta un botón "Reservar" propio (independiente de los
+ *    botones nativos de HBook, que este sitio ya oculta con su propio CSS)
+ *    que enlaza a la página real del alojamiento con las fechas/personas
+ *    de la búsqueda actual como parámetros de URL, para que
+ *    addon-filtros-accom-page.js las recoja allí y continúe sin repetir
+ *    la búsqueda.
+ * 5. Vuelve a aplicar todo lo anterior cada vez que HBook renderiza
+ *    resultados nuevos (nueva búsqueda de fechas), gracias a un
+ *    MutationObserver.
  */
 ( function () {
 	'use strict';
@@ -33,6 +40,7 @@
 		var resultsList = wrapper.querySelector( '.hb-accom-list' );
 		var checkboxes = form ? Array.prototype.slice.call( form.querySelectorAll( 'input[type="checkbox"]' ) ) : [];
 		var badgesMap = window.AddonFiltrosHbook.badgesMap || {};
+		var linksMap = window.AddonFiltrosHbook.linksMap || {};
 
 		// null = sin filtro de características activo (se muestra todo lo que devuelva HBook).
 		var allowedIds = null;
@@ -116,6 +124,62 @@
 			} );
 		}
 
+		/**
+		 * Añade a cada tarjeta un botón "Reservar" propio que enlaza a la
+		 * página real del alojamiento (AddonFiltrosHbook.linksMap), con las
+		 * fechas/personas de la búsqueda ACTUAL (leídas de los campos reales
+		 * de HBook en este mismo bloque) como parámetros de URL propios
+		 * (addon_checkin, addon_checkout, addon_adults, addon_children).
+		 * Idempotente: si el botón ya existe, solo se actualiza su enlace.
+		 */
+		function buildReservarButtons() {
+			if ( ! resultsList ) {
+				return;
+			}
+			var checkInField = wrapper.querySelector( '.hb-check-in-date' );
+			var checkOutField = wrapper.querySelector( '.hb-check-out-date' );
+			var adultsField = wrapper.querySelector( 'select#adults, select.hb-adults' );
+			var childrenField = wrapper.querySelector( 'select#children, select.hb-children' );
+
+			var cards = resultsList.querySelectorAll( '[data-accom-id]' );
+			cards.forEach( function ( card ) {
+				var id = card.getAttribute( 'data-accom-id' );
+				var link = linksMap[ id ];
+				if ( ! link ) {
+					return;
+				}
+
+				var url;
+				try {
+					url = new URL( link );
+				} catch ( e ) {
+					return;
+				}
+				if ( checkInField && checkInField.value ) {
+					url.searchParams.set( 'addon_checkin', checkInField.value );
+				}
+				if ( checkOutField && checkOutField.value ) {
+					url.searchParams.set( 'addon_checkout', checkOutField.value );
+				}
+				if ( adultsField && adultsField.value ) {
+					url.searchParams.set( 'addon_adults', adultsField.value );
+				}
+				if ( childrenField && childrenField.value ) {
+					url.searchParams.set( 'addon_children', childrenField.value );
+				}
+
+				var button = card.querySelector( '.addon-filtros-reservar-btn' );
+				if ( ! button ) {
+					button = document.createElement( 'a' );
+					button.className = 'addon-filtros-reservar-btn';
+					button.textContent = window.AddonFiltrosHbook.i18n.reservar;
+					var host = card.querySelector( '.hb-select-accom-wrapper' ) || card;
+					host.appendChild( button );
+				}
+				button.setAttribute( 'href', url.toString() );
+			} );
+		}
+
 		function fetchAllowedIds() {
 			var params = new URLSearchParams();
 			params.append( 'action', 'addon_filtros_hbook_get_allowed_ids' );
@@ -193,6 +257,7 @@
 		if ( resultsList && window.MutationObserver ) {
 			var observer = new MutationObserver( function () {
 				injectBadges();
+				buildReservarButtons();
 				applyCharacteristicsFilter();
 			} );
 			observer.observe( resultsList, { childList: true } );

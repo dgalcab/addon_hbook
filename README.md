@@ -16,7 +16,8 @@ Este repositorio es autocontenido: la raíz del repositorio **es** la carpeta de
 addon-filtros-hbook.php                    Punto de entrada, seguridad, hooks y registro
 includes/class-addon-filtros-engine.php    Shortcode y endpoint AJAX (solo IDs por características)
 assets/css/addon-filtros-public.css        Estilos encapsulados, responsive
-assets/js/addon-filtros-public.js          Filtro por visibilidad sobre los resultados de HBook
+assets/js/addon-filtros-public.js          Filtro por visibilidad + badges + botón "Reservar" en el buscador
+assets/js/addon-filtros-accom-page.js      Autorrelleno + búsqueda automática en la página de cada alojamiento
 ```
 
 ## Arquitectura: quién hace qué
@@ -36,11 +37,15 @@ En ningún momento se interceptan las peticiones AJAX de HBook (`hb_get_availabl
 
 ### El botón "Reservar" de cada tarjeta
 
-Es el propio botón "Seleccionar esta opción" (`hb-select-accom`) de HBook: al pulsarlo continúa, en la misma página y sin repetir la búsqueda, con las mismas fechas/personas/precio ya calculados. Para que sea la única acción visible (y no se muestre también un enlace a la página propia del alojamiento, que reabriría un segundo buscador), revisa en **HBook → Formulario de búsqueda** que estas tres opciones estén en "No" (es su valor de fábrica):
+Es un botón **propio del addon** (`.addon-filtros-reservar-btn`), no los nativos `hb-select-accom`/`hb-view-accom` de HBook — muchos sitios (incluido el que motivó esto) ya traen esos dos ocultos con CSS propio (`display:none !important`), así que en vez de pelear contra ese `!important`, el addon construye el suyo desde cero.
 
-- Vincular el título hacia la página del alojamiento (`hb_title_accom_link`)
-- Vincular la miniatura hacia la página del alojamiento (`hb_thumb_accom_link`)
-- Mostrar un botón que enlace hacia la página del alojamiento (`hb_button_accom_link`)
+Funciona así:
+
+1. El botón enlaza a la página real del alojamiento (`get_permalink()`, vía `AddonFiltrosHbook.linksMap`), añadiendo la fecha de entrada/salida y adultos/niños de la búsqueda actual como parámetros de URL propios: `?addon_checkin=...&addon_checkout=...&addon_adults=...&addon_children=...`.
+2. En esa página (que debe tener su propio `[hb_booking_form accom_id="X"]` incrustado — lo gestiona el propio sitio, no este addon), se carga automáticamente `assets/js/addon-filtros-accom-page.js`, que lee esos parámetros y rellena los campos REALES de HBook exactamente como lo haría un visitante: pone el valor en `.hb-check-in-date`/`.hb-check-out-date` y dispara un evento `keyup` — el mismo evento que el propio datepicker de HBook escucha para sincronizar su estado interno (verificado en `utils/jq-datepick/js/hb-datepick.js` de HBook) — y por último pulsa el botón "Buscar" real.
+3. No se reimplementa nada de HBook: solo se simulan, sobre los campos reales, las mismas acciones que haría un visitante con teclado/ratón. La disponibilidad, el precio y la reserva las sigue calculando y creando HBook íntegramente.
+
+Este segundo script (`addon-filtros-hbook-accom-page`) se carga automáticamente en cualquier página individual de `hb_accommodation`, no solo donde esté el shortcode `[addon_filtros_hbook]`.
 
 ## Taxonomía "Características" — funciona de serie, sin escribir código
 

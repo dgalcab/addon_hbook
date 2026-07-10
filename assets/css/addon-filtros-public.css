@@ -304,37 +304,37 @@
 	margin-top: 2px;
 }
 
-/* Botón "Seleccionar esta opción": la acción principal, sin salir de la página */
 #addon-filtros-wrapper .hb-select-accom-wrapper {
 	margin-top: 14px;
 }
 
-#addon-filtros-wrapper .hb-select-accom-wrapper input[type="submit"] {
+/*
+ * Botón "Reservar" propio del addon (no hb-select-accom/hb-view-accom de
+ * HBook): este sitio ya los oculta con su propio CSS (`display:none
+ * !important` en .hb-select-accom, .hb-view-accom), así que en vez de
+ * pelear contra ese !important, el addon construye su propio botón, que
+ * lleva a la página del alojamiento con las fechas/personas ya elegidas
+ * (ver buildReservarButtons() en addon-filtros-public.js).
+ */
+#addon-filtros-wrapper .addon-filtros-reservar-btn {
+	display: block;
 	background: var(--addon-accent);
 	color: var(--addon-text-on-accent);
 	border: none;
 	border-radius: 8px;
 	font-weight: 600;
 	font-size: 15px;
+	text-align: center;
+	text-decoration: none;
 	width: 100%;
 	padding: 12px 20px;
 	cursor: pointer;
 	transition: background-color 0.15s ease;
 }
 
-#addon-filtros-wrapper .hb-select-accom-wrapper input[type="submit"]:hover {
+#addon-filtros-wrapper .addon-filtros-reservar-btn:hover {
 	background: var(--addon-accent-hover);
-}
-
-#addon-filtros-wrapper .hb-view-accom input[type="submit"] {
-	background: transparent;
-	border: 1px solid var(--addon-border);
-	color: var(--addon-text);
-	border-radius: 8px;
-	width: 100%;
-	padding: 10px 20px;
-	margin-top: 8px;
-	cursor: pointer;
+	color: var(--addon-text-on-accent);
 }
 
 /* Mensaje propio: "ninguna de las disponibles cumple las características" */

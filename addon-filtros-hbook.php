@@ -173,19 +173,16 @@ add_action( 'admin_notices', 'addon_filtros_hbook_admin_notices' );
 ══════════════════════════════════════════════ */
 
 /**
- * Mapa [ID de alojamiento => nombres de sus características ], para poder
- * mostrar badges informativos en cada tarjeta sin inventar datos: solo lo
- * que el admin ya ha asignado a cada hb_accommodation. Se calcula una vez
- * por carga de página (no cambia durante la sesión del visitante), y solo
- * cuando el shortcode realmente se va a usar.
+ * Datos de cada alojamiento que el JS necesita para enriquecer las
+ * tarjetas sin inventar nada: sus características ya asignadas
+ * (badges) y su permalink real (para el botón "Reservar", que navega
+ * a la página propia del alojamiento). Una sola consulta, calculada
+ * solo cuando el shortcode realmente se va a usar.
  *
- * @return array<int, string[]>
+ * @return array{ badges: array<int, string[]>, links: array<int, string> }
  */
-function addon_filtros_hbook_get_accom_badges_map() {
+function addon_filtros_hbook_get_accom_data() {
 	$taxonomies = addon_filtros_hbook_get_taxonomies();
-	if ( empty( $taxonomies ) ) {
-		return array();
-	}
 
 	$post_ids = get_posts(
 		array(
@@ -196,8 +193,12 @@ function addon_filtros_hbook_get_accom_badges_map() {
 		)
 	);
 
-	$map = array();
+	$badges = array();
+	$links  = array();
+
 	foreach ( $post_ids as $post_id ) {
+		$links[ $post_id ] = get_permalink( $post_id );
+
 		$names = array();
 		foreach ( $taxonomies as $taxonomy ) {
 			$terms = get_the_terms( $post_id, $taxonomy );
@@ -208,11 +209,14 @@ function addon_filtros_hbook_get_accom_badges_map() {
 			}
 		}
 		if ( $names ) {
-			$map[ $post_id ] = $names;
+			$badges[ $post_id ] = $names;
 		}
 	}
 
-	return $map;
+	return array(
+		'badges' => $badges,
+		'links'  => $links,
+	);
 }
 
 function addon_filtros_hbook_enqueue_assets() {
@@ -244,16 +248,20 @@ function addon_filtros_hbook_enqueue_assets() {
 		return;
 	}
 
+	$accom_data = addon_filtros_hbook_get_accom_data();
+
 	wp_localize_script(
 		'addon-filtros-hbook-public',
 		'AddonFiltrosHbook',
 		array(
 			'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
 			'nonce'     => wp_create_nonce( 'addon_filtros_hbook_nonce' ),
-			'badgesMap' => addon_filtros_hbook_get_accom_badges_map(),
+			'badgesMap' => $accom_data['badges'],
+			'linksMap'  => $accom_data['links'],
 			'i18n'      => array(
 				'noResults' => __( 'No se han encontrado alojamientos con esas características.', 'addon-filtros-hbook' ),
 				'error'     => __( 'Ha ocurrido un error al cargar los resultados. Inténtalo de nuevo.', 'addon-filtros-hbook' ),
+				'reservar'  => __( 'Reservar', 'addon-filtros-hbook' ),
 			),
 		)
 	);
@@ -262,6 +270,33 @@ function addon_filtros_hbook_enqueue_assets() {
 	wp_enqueue_script( 'addon-filtros-hbook-public' );
 }
 add_action( 'wp_enqueue_scripts', 'addon_filtros_hbook_enqueue_assets' );
+
+/* ══════════════════════════════════════════════
+   PÁGINA PROPIA DE CADA ALOJAMIENTO
+
+   El botón "Reservar" de cada tarjeta enlaza a la página del propio
+   hb_accommodation (donde el sitio ya tiene incrustado su propio
+   [hb_booking_form accom_id="X"]) añadiendo las fechas/personas
+   elegidas como parámetros de URL. Este script, que solo se carga en
+   esas páginas individuales, rellena esos mismos campos del formulario
+   real de HBook (tal y como lo haría el visitante) y lanza la búsqueda
+   automáticamente, para no repetir nada.
+══════════════════════════════════════════════ */
+
+function addon_filtros_hbook_enqueue_accom_page_assets() {
+	if ( ! is_singular( ADDON_FILTROS_HBOOK_CPT ) ) {
+		return;
+	}
+
+	wp_enqueue_script(
+		'addon-filtros-hbook-accom-page',
+		ADDON_FILTROS_HBOOK_URL . 'assets/js/addon-filtros-accom-page.js',
+		array(),
+		ADDON_FILTROS_HBOOK_VERSION,
+		true
+	);
+}
+add_action( 'wp_enqueue_scripts', 'addon_filtros_hbook_enqueue_accom_page_assets' );
 
 /* ══════════════════════════════════════════════
    SHORTCODE
