@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.6
+
+- Las fechas y personas se rellenaban bien, pero era "como si no se pulsara Buscar": el cierre forzado del calendario emergente (añadido en la 2.0.5) podía fallar a mitad de camino, y al ser código síncrono, un error ahí cortaba la ejecución antes de llegar al clic en "Buscar". Ahora esa parte va protegida en un try/catch (si falla, se avisa por consola pero se continúa igualmente) y el clic en "Buscar" se lanza en una tarea aparte, para no depender de que termine ninguna animación pendiente del calendario.
+
 ## 2.0.5
 
 - El calendario emergente de HBook se quedaba visible tapando la pantalla tras el autorrelleno (parecía que la página se "quedaba en bucle"): el script ponía el valor de las fechas sin enfocar antes los campos, así que HBook nunca distinguía si se estaba eligiendo la fecha de entrada o la de salida, y el calendario no llegaba a cerrarse porque su propio cierre-al-hacer-clic-fuera ignora los clics durante el primer segundo tras abrirse (y este script rellena ambos campos en milisegundos). Ahora se enfoca cada campo antes de rellenarlo (como haría un visitante) y se fuerza el cierre del calendario justo después, antes de lanzar la búsqueda.

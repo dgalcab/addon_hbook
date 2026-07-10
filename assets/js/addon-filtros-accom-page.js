@@ -110,34 +110,42 @@
 				return;
 			}
 
-			// Se enfoca cada campo antes de rellenarlo, igual que haría un
-			// visitante pasando de un campo a otro con el teclado: HBook
-			// escucha el evento "focus" (ver hb-datepick.js,
-			// activate_check_in_choice/activate_check_out_choice) para saber
-			// si se está eligiendo la fecha de entrada o la de salida. Sin
-			// este enfoque, HBook se queda pensando que se sigue eligiendo
-			// la fecha de entrada al rellenar la de salida, y su estado
-			// interno (aunque la búsqueda en sí salga bien) queda
-			// desincronizado.
-			if ( checkIn ) {
-				checkInField.focus();
-				checkInField.value = fromIsoDate( checkIn );
-				checkInField.dispatchEvent( new Event( 'keyup', { bubbles: true } ) );
-			}
-			if ( checkOut ) {
-				checkOutField.focus();
-				checkOutField.value = fromIsoDate( checkOut );
-				checkOutField.dispatchEvent( new Event( 'keyup', { bubbles: true } ) );
-			}
+			// Todo lo relacionado con simular el calendario (enfocar campos,
+			// cerrarlo a la fuerza) se protege en un try/catch: si algo de
+			// eso fallara, el clic en "Buscar" de más abajo debe ejecutarse
+			// igualmente — las fechas ya estarían puestas en los campos, así
+			// que la búsqueda seguiría siendo válida. Sin este blindaje, un
+			// error aquí detendría el resto del script (síncrono) y daría
+			// la sensación de que "no se pulsa Buscar".
+			try {
+				// Se enfoca cada campo antes de rellenarlo, igual que haría
+				// un visitante pasando de un campo a otro con el teclado:
+				// HBook escucha el evento "focus" (ver hb-datepick.js,
+				// activate_check_in_choice/activate_check_out_choice) para
+				// saber si se está eligiendo la fecha de entrada o la de
+				// salida.
+				if ( checkIn ) {
+					checkInField.focus();
+					checkInField.value = fromIsoDate( checkIn );
+					checkInField.dispatchEvent( new Event( 'keyup', { bubbles: true } ) );
+				}
+				if ( checkOut ) {
+					checkOutField.focus();
+					checkOutField.value = fromIsoDate( checkOut );
+					checkOutField.dispatchEvent( new Event( 'keyup', { bubbles: true } ) );
+				}
 
-			// Enfocar los campos abre el calendario emergente de HBook (su
-			// comportamiento normal al elegir fechas a mano). Como aquí no
-			// hay ningún clic real fuera del calendario que lo cierre, se
-			// fuerza a que se oculte antes de continuar — si no, se queda
-			// visible tapando el resultado de la búsqueda y el botón
-			// "Siguiente", dando la sensación de que la página se ha quedado
-			// parada/en bucle.
-			forceCloseDatepickPopup();
+				// Enfocar los campos abre el calendario emergente de HBook
+				// (su comportamiento normal al elegir fechas a mano). Como
+				// aquí no hay ningún clic real fuera del calendario que lo
+				// cierre, se fuerza a que se oculte antes de continuar — si
+				// no, se queda visible tapando el resultado de la búsqueda.
+				forceCloseDatepickPopup();
+			} catch ( e ) {
+				if ( window.console && window.console.warn ) {
+					window.console.warn( 'Addon Filtros HBook: no se pudo simular el calendario, se continúa igualmente.', e );
+				}
+			}
 
 			var adultsField = document.querySelector( 'select#adults, select.hb-adults' );
 			if ( adultsField && adults ) {
@@ -151,8 +159,13 @@
 				childrenField.dispatchEvent( new Event( 'change', { bubbles: true } ) );
 			}
 
-			submitButton.click();
-			advanceToNextStep();
+			// En una tarea aparte (macrotask), para no depender de que
+			// termine ninguna animación/cola pendiente del calendario de
+			// HBook antes de pulsar "Buscar".
+			setTimeout( function () {
+				submitButton.click();
+				advanceToNextStep();
+			}, 0 );
 		}
 
 		/**
