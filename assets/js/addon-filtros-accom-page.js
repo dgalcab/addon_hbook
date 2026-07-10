@@ -71,6 +71,26 @@
 			}
 		}
 
+		/**
+		 * Oculta directamente el calendario emergente de HBook y le quita
+		 * la marca de "campos activos" (.hb-datepick-active-inputs), sin
+		 * depender de su lógica interna de cierre por clic (que además
+		 * ignora clics durante el primer segundo tras abrirse, ver
+		 * hb-datepick.js: "opening_time" — este script rellena ambos
+		 * campos en milisegundos, así que ese clic nunca llegaría a
+		 * tiempo de cerrarlo por sí solo).
+		 */
+		function forceCloseDatepickPopup() {
+			var popup = document.querySelector( '.hb-datepick-popup-wrapper' );
+			if ( popup ) {
+				popup.style.display = 'none';
+			}
+			var activeInputs = document.querySelectorAll( '.hb-datepick-active-inputs' );
+			activeInputs.forEach( function ( el ) {
+				el.classList.remove( 'hb-datepick-active-inputs' );
+			} );
+		}
+
 		function fillAndSearch( attempt ) {
 			attempt = attempt || 0;
 
@@ -90,14 +110,34 @@
 				return;
 			}
 
+			// Se enfoca cada campo antes de rellenarlo, igual que haría un
+			// visitante pasando de un campo a otro con el teclado: HBook
+			// escucha el evento "focus" (ver hb-datepick.js,
+			// activate_check_in_choice/activate_check_out_choice) para saber
+			// si se está eligiendo la fecha de entrada o la de salida. Sin
+			// este enfoque, HBook se queda pensando que se sigue eligiendo
+			// la fecha de entrada al rellenar la de salida, y su estado
+			// interno (aunque la búsqueda en sí salga bien) queda
+			// desincronizado.
 			if ( checkIn ) {
+				checkInField.focus();
 				checkInField.value = fromIsoDate( checkIn );
 				checkInField.dispatchEvent( new Event( 'keyup', { bubbles: true } ) );
 			}
 			if ( checkOut ) {
+				checkOutField.focus();
 				checkOutField.value = fromIsoDate( checkOut );
 				checkOutField.dispatchEvent( new Event( 'keyup', { bubbles: true } ) );
 			}
+
+			// Enfocar los campos abre el calendario emergente de HBook (su
+			// comportamiento normal al elegir fechas a mano). Como aquí no
+			// hay ningún clic real fuera del calendario que lo cierre, se
+			// fuerza a que se oculte antes de continuar — si no, se queda
+			// visible tapando el resultado de la búsqueda y el botón
+			// "Siguiente", dando la sensación de que la página se ha quedado
+			// parada/en bucle.
+			forceCloseDatepickPopup();
 
 			var adultsField = document.querySelector( 'select#adults, select.hb-adults' );
 			if ( adultsField && adults ) {

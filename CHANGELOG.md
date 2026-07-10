@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.5
+
+- El calendario emergente de HBook se quedaba visible tapando la pantalla tras el autorrelleno (parecía que la página se "quedaba en bucle"): el script ponía el valor de las fechas sin enfocar antes los campos, así que HBook nunca distinguía si se estaba eligiendo la fecha de entrada o la de salida, y el calendario no llegaba a cerrarse porque su propio cierre-al-hacer-clic-fuera ignora los clics durante el primer segundo tras abrirse (y este script rellena ambos campos en milisegundos). Ahora se enfoca cada campo antes de rellenarlo (como haría un visitante) y se fuerza el cierre del calendario justo después, antes de lanzar la búsqueda.
+
 ## 2.0.4
 
 - Tras aterrizar en la página del alojamiento con las fechas ya rellenadas y la búsqueda lanzada, el script se paraba en el paso 1 ("alojamiento seleccionado") sin avanzar al paso 2 ("servicios adicionales"). En una página de un único alojamiento, HBook autoselecciona ese resultado solo, pero sigue haciendo falta pulsar su botón "Siguiente" (`.hb-next-step-1`) para continuar — ahora el script espera (la búsqueda es AJAX) a que ese botón esté visible y lo pulsa automáticamente, igual que haría el visitante.
