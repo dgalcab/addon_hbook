@@ -7,14 +7,17 @@
  * HBook, sin tocar.
  *
  * Lo único que hace este script:
- * 1. Cuando el usuario marca/desmarca una característica, pide al
+ * 1. Cuando el usuario marca/desmarca una característica (pill), pide al
  *    endpoint propio del addon la lista de IDs de alojamiento que la
  *    cumplen (sin fechas).
  * 2. Observa el contenedor `.hb-accom-list` que HBook rellena tras su
  *    propia búsqueda (ver HBook: `$booking_wrapper.find('.hb-accom-list').html(response.mark_up)`)
  *    y oculta (display:none, de forma reversible) las tarjetas
  *    (`[data-accom-id]`) que no estén en esa lista.
- * 3. Vuelve a aplicar el filtro cada vez que HBook renderiza resultados
+ * 3. Inyecta badges informativos (las características de cada alojamiento)
+ *    en cada tarjeta, a partir de datos ya asignados en WordPress
+ *    (AddonFiltrosHbook.badgesMap), sin inventar nada.
+ * 4. Vuelve a aplicar ambas cosas cada vez que HBook renderiza resultados
  *    nuevos (nueva búsqueda de fechas), gracias a un MutationObserver.
  */
 ( function () {
@@ -28,52 +31,13 @@
 
 		var form = document.getElementById( 'addon-filtros-form' );
 		var resultsList = wrapper.querySelector( '.hb-accom-list' );
-		var panel = document.getElementById( 'addon-filtros-panel' );
-		var overlay = document.getElementById( 'addon-filtros-panel-overlay' );
-		var toggleBtn = document.getElementById( 'addon-filtros-toggle' );
-		var closeBtn = document.getElementById( 'addon-filtros-panel-close' );
 		var checkboxes = form ? Array.prototype.slice.call( form.querySelectorAll( 'input[type="checkbox"]' ) ) : [];
+		var badgesMap = window.AddonFiltrosHbook.badgesMap || {};
 
 		// null = sin filtro de características activo (se muestra todo lo que devuelva HBook).
 		var allowedIds = null;
 		var noMatchMessage = null;
 		var currentRequest = null;
-
-		function openPanel() {
-			if ( ! panel ) {
-				return;
-			}
-			panel.classList.add( 'is-open' );
-			if ( overlay ) {
-				overlay.classList.add( 'is-open' );
-			}
-			if ( toggleBtn ) {
-				toggleBtn.setAttribute( 'aria-expanded', 'true' );
-			}
-		}
-
-		function closePanel() {
-			if ( ! panel ) {
-				return;
-			}
-			panel.classList.remove( 'is-open' );
-			if ( overlay ) {
-				overlay.classList.remove( 'is-open' );
-			}
-			if ( toggleBtn ) {
-				toggleBtn.setAttribute( 'aria-expanded', 'false' );
-			}
-		}
-
-		if ( toggleBtn ) {
-			toggleBtn.addEventListener( 'click', openPanel );
-		}
-		if ( closeBtn ) {
-			closeBtn.addEventListener( 'click', closePanel );
-		}
-		if ( overlay ) {
-			overlay.addEventListener( 'click', closePanel );
-		}
 
 		function toggleNoMatchMessage( show ) {
 			if ( ! resultsList ) {
@@ -114,6 +78,42 @@
 				}
 			} );
 			toggleNoMatchMessage( visibleCount === 0 );
+		}
+
+		/**
+		 * Añade, dentro de cada tarjeta que HBook ya renderizó, la lista de
+		 * características de ese alojamiento (las que el admin le haya
+		 * asignado en WordPress). Idempotente: no duplica si ya se insertó.
+		 */
+		function injectBadges() {
+			if ( ! resultsList ) {
+				return;
+			}
+			var cards = resultsList.querySelectorAll( '[data-accom-id]' );
+			cards.forEach( function ( card ) {
+				if ( card.querySelector( '.addon-filtros-card-badges' ) ) {
+					return;
+				}
+				var id = card.getAttribute( 'data-accom-id' );
+				var names = badgesMap[ id ];
+				if ( ! names || ! names.length ) {
+					return;
+				}
+				var list = document.createElement( 'ul' );
+				list.className = 'addon-filtros-card-badges';
+				names.forEach( function ( name ) {
+					var item = document.createElement( 'li' );
+					item.className = 'addon-filtros-badge';
+					item.textContent = name;
+					list.appendChild( item );
+				} );
+				var anchor = card.querySelector( '.hb-accom-desc' ) || card.querySelector( '.hb-accom-title' );
+				if ( anchor && anchor.parentNode ) {
+					anchor.parentNode.insertBefore( list, anchor.nextSibling );
+				} else {
+					card.appendChild( list );
+				}
+			} );
 		}
 
 		function fetchAllowedIds() {
@@ -171,16 +171,28 @@
 				} );
 		}
 
+		function updatePillState( checkbox ) {
+			var pill = checkbox.closest( '.addon-filtros-pill' );
+			if ( pill ) {
+				pill.classList.toggle( 'is-checked', checkbox.checked );
+			}
+		}
+
 		checkboxes.forEach( function ( checkbox ) {
-			checkbox.addEventListener( 'change', fetchAllowedIds );
+			updatePillState( checkbox );
+			checkbox.addEventListener( 'change', function () {
+				updatePillState( checkbox );
+				fetchAllowedIds();
+			} );
 		} );
 
 		// HBook sustituye por completo el contenido de .hb-accom-list en
 		// cada búsqueda de fechas (ver accommodation-list.js/booking-form.js
 		// de HBook: `$booking_wrapper.find('.hb-accom-list').html(...)`).
-		// Reaplicamos el filtro de características cada vez que eso ocurre.
+		// Reaplicamos filtro + badges cada vez que eso ocurre.
 		if ( resultsList && window.MutationObserver ) {
 			var observer = new MutationObserver( function () {
+				injectBadges();
 				applyCharacteristicsFilter();
 			} );
 			observer.observe( resultsList, { childList: true } );

@@ -74,57 +74,53 @@ class Addon_Filtros_Hbook_Engine {
 		ob_start();
 		?>
 		<div id="addon-filtros-wrapper" class="addon-filtros-wrapper">
-			<?php echo self::render_filters_panel(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-			<div class="addon-filtros-results">
-				<?php echo do_shortcode( $booking_form_shortcode ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			<div class="addon-filtros-search-card">
+				<?php echo self::render_pills_row(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				<div class="addon-filtros-hbook-embed">
+					<?php echo do_shortcode( $booking_form_shortcode ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+				</div>
 			</div>
 		</div>
-		<div class="addon-filtros-panel-overlay" id="addon-filtros-panel-overlay"></div>
-		<button type="button" class="addon-filtros-toggle" id="addon-filtros-toggle" aria-controls="addon-filtros-panel" aria-expanded="false">
-			<?php esc_html_e( 'Filtrar Características', 'addon-filtros-hbook' ); ?>
-		</button>
 		<?php
 		return ob_get_clean();
 	}
 
 	/**
-	 * Bloque estructural izquierdo: formulario de filtros, con un grupo de
-	 * checkboxes por cada taxonomía realmente registrada contra
-	 * hb_accommodation (ver addon_filtros_hbook_get_taxonomies()).
+	 * Fila de "pills" (chips) de características, pensada para fundirse
+	 * visualmente con los campos de fecha/personas de HBook en un único
+	 * bloque de búsqueda. Un grupo de pills por cada taxonomía realmente
+	 * registrada contra hb_accommodation (ver addon_filtros_hbook_get_taxonomies()).
 	 */
-	private static function render_filters_panel() {
+	private static function render_pills_row() {
 		$taxonomies = addon_filtros_hbook_get_taxonomies();
 
+		if ( empty( $taxonomies ) ) {
+			return '';
+		}
+
+		$has_terms = false;
 		ob_start();
 		?>
-		<div class="addon-filtros-panel" id="addon-filtros-panel">
-			<div class="addon-filtros-panel-header">
-				<h3 class="addon-filtros-panel-title"><?php esc_html_e( 'Características', 'addon-filtros-hbook' ); ?></h3>
-				<button type="button" class="addon-filtros-panel-close" id="addon-filtros-panel-close" aria-label="<?php esc_attr_e( 'Cerrar filtros', 'addon-filtros-hbook' ); ?>">&times;</button>
-			</div>
-			<?php if ( empty( $taxonomies ) ) : ?>
-				<p class="addon-filtros-no-taxonomies">
-					<?php esc_html_e( 'Todavía no hay características configuradas para los alojamientos.', 'addon-filtros-hbook' ); ?>
-				</p>
-			<?php else : ?>
-				<p class="addon-filtros-panel-hint">
-					<?php esc_html_e( 'Marca las características que buscas. Se aplican sobre los resultados de fechas de abajo.', 'addon-filtros-hbook' ); ?>
-				</p>
-				<form id="addon-filtros-form" class="addon-filtros-form">
-					<?php
-					foreach ( $taxonomies as $taxonomy ) {
-						echo self::render_taxonomy_group( $taxonomy ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-					}
-					?>
-				</form>
-			<?php endif; ?>
-		</div>
+		<form id="addon-filtros-form" class="addon-filtros-pills-form">
+			<?php
+			foreach ( $taxonomies as $taxonomy ) {
+				$group_markup = self::render_taxonomy_group( $taxonomy );
+				if ( $group_markup ) {
+					$has_terms = true;
+					echo $group_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				}
+			}
+			?>
+		</form>
 		<?php
-		return ob_get_clean();
+		$markup = ob_get_clean();
+
+		return $has_terms ? $markup : '';
 	}
 
 	/**
-	 * Renderiza un grupo de checkboxes para una taxonomía concreta.
+	 * Renderiza un grupo de pills (checkboxes estilizados como chips) para
+	 * una taxonomía concreta.
 	 *
 	 * @param string $taxonomy Slug de la taxonomía, ya verificado como registrado.
 	 */
@@ -145,21 +141,21 @@ class Addon_Filtros_Hbook_Engine {
 
 		ob_start();
 		?>
-		<fieldset class="addon-filtros-group" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>">
-			<legend class="addon-filtros-group-title"><?php echo esc_html( $label ); ?></legend>
+		<div class="addon-filtros-pill-group" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>">
+			<span class="addon-filtros-pill-group-label"><?php echo esc_html( $label ); ?>:</span>
 			<?php foreach ( $terms as $term ) : ?>
-				<label class="addon-filtros-checkbox">
+				<label class="addon-filtros-pill">
 					<input
 						type="checkbox"
-						class="addon-filtros-checkbox-input"
+						class="addon-filtros-pill-input"
 						name="addon_filtros[<?php echo esc_attr( $taxonomy ); ?>][]"
 						value="<?php echo esc_attr( $term->slug ); ?>"
 						data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>"
 					>
-					<span class="addon-filtros-checkbox-label"><?php echo esc_html( $term->name ); ?></span>
+					<span class="addon-filtros-pill-label"><?php echo esc_html( $term->name ); ?></span>
 				</label>
 			<?php endforeach; ?>
-		</fieldset>
+		</div>
 		<?php
 		return ob_get_clean();
 	}

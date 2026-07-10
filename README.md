@@ -25,14 +25,22 @@ Esto es importante y está verificado directamente contra el código fuente de H
 
 **El buscador real (fechas, personas, disponibilidad, reserva) lo hace HBook al 100%, sin tocar.** `[addon_filtros_hbook]` incrusta el propio `[hb_booking_form all_accom="yes"]` de HBook: el mismo selector de fechas, adultos/niños, cálculo de disponibilidad y creación de la reserva que usarías si pusieras ese shortcode directamente. Este addon no reimplementa ni intercepta nada de eso — sería el punto más fácil de romper el sitio.
 
-**El panel de "Características" de este addon es un filtro añadido por encima, no un buscador aparte.** Funciona así:
+**Las "pills" de características de este addon son un filtro añadido por encima, no un buscador aparte.** Visualmente se funden en un único bloque de búsqueda junto a los campos de fecha/personas de HBook (mismo `<div class="addon-filtros-search-card">`), pero técnicamente siguen siendo dos cosas independientes que se combinan solas:
 
 1. HBook, al buscar, siempre mete sus resultados dentro de un contenedor `<div class="hb-accom-list">`, y cada alojamiento resultante lleva `data-accom-id="ID"` (verificado en `front-end/booking-form/search-form.php` y `front-end/booking-form/available-accom.php` de HBook).
-2. Cuando marcas una característica, el addon llama a su propio endpoint AJAX (`addon_filtros_hbook_get_allowed_ids`), que **no calcula fechas ni disponibilidad** — solo hace un `tax_query` puro y devuelve qué IDs de alojamiento tienen esa característica.
-3. El JS del addon oculta (con `display:none`, de forma reversible, sin tocar el HTML de HBook) las tarjetas de `.hb-accom-list` cuyo ID no esté en esa lista.
-4. Un `MutationObserver` reaplica el filtro automáticamente cada vez que HBook vuelve a renderizar resultados (nueva búsqueda de fechas), así que da igual el orden en que el usuario marque características o busque fechas — el resultado final siempre combina ambas cosas.
+2. Cuando marcas una pill, el addon llama a su propio endpoint AJAX (`addon_filtros_hbook_get_allowed_ids`), que **no calcula fechas ni disponibilidad** — solo hace un `tax_query` puro y devuelve qué IDs de alojamiento tienen esa característica.
+3. El JS del addon oculta (con `display:none`, de forma reversible, sin tocar el HTML de HBook) las tarjetas de `.hb-accom-list` cuyo ID no esté en esa lista, y les inyecta badges con sus características (a partir de `AddonFiltrosHbook.badgesMap`, calculado en PHP con los términos ya asignados a cada alojamiento).
+4. Un `MutationObserver` reaplica filtro + badges automáticamente cada vez que HBook vuelve a renderizar resultados (nueva búsqueda de fechas), así que da igual el orden en que el usuario marque pills o busque fechas — no hace falta un segundo "Buscar": con marcar las pills y pulsar el único botón "Buscar" de HBook (en cualquier orden) ya sale el resultado combinado.
 
-En ningún momento se interceptan las peticiones AJAX de HBook (`hb_get_available_accom`, `hb_create_resa`...) ni se modifica el HTML que devuelven: solo se restyla vía CSS scopeado y se oculta/muestra vía JS.
+En ningún momento se interceptan las peticiones AJAX de HBook (`hb_get_available_accom`, `hb_create_resa`...) ni se modifica el HTML que devuelven: solo se restyla vía CSS scopeado (incluida la propia tarjeta de resultado: imagen, precio, botón "Seleccionar esta opción") y se oculta/muestra/enriquece vía JS.
+
+### El botón "Reservar" de cada tarjeta
+
+Es el propio botón "Seleccionar esta opción" (`hb-select-accom`) de HBook: al pulsarlo continúa, en la misma página y sin repetir la búsqueda, con las mismas fechas/personas/precio ya calculados. Para que sea la única acción visible (y no se muestre también un enlace a la página propia del alojamiento, que reabriría un segundo buscador), revisa en **HBook → Formulario de búsqueda** que estas tres opciones estén en "No" (es su valor de fábrica):
+
+- Vincular el título hacia la página del alojamiento (`hb_title_accom_link`)
+- Vincular la miniatura hacia la página del alojamiento (`hb_thumb_accom_link`)
+- Mostrar un botón que enlace hacia la página del alojamiento (`hb_button_accom_link`)
 
 ## Taxonomía "Características" — funciona de serie, sin escribir código
 

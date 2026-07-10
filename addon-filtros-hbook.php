@@ -172,6 +172,49 @@ add_action( 'admin_notices', 'addon_filtros_hbook_admin_notices' );
    del resto del sitio.
 ══════════════════════════════════════════════ */
 
+/**
+ * Mapa [ID de alojamiento => nombres de sus características ], para poder
+ * mostrar badges informativos en cada tarjeta sin inventar datos: solo lo
+ * que el admin ya ha asignado a cada hb_accommodation. Se calcula una vez
+ * por carga de página (no cambia durante la sesión del visitante), y solo
+ * cuando el shortcode realmente se va a usar.
+ *
+ * @return array<int, string[]>
+ */
+function addon_filtros_hbook_get_accom_badges_map() {
+	$taxonomies = addon_filtros_hbook_get_taxonomies();
+	if ( empty( $taxonomies ) ) {
+		return array();
+	}
+
+	$post_ids = get_posts(
+		array(
+			'post_type'      => ADDON_FILTROS_HBOOK_CPT,
+			'post_status'    => 'publish',
+			'posts_per_page' => -1,
+			'fields'         => 'ids',
+		)
+	);
+
+	$map = array();
+	foreach ( $post_ids as $post_id ) {
+		$names = array();
+		foreach ( $taxonomies as $taxonomy ) {
+			$terms = get_the_terms( $post_id, $taxonomy );
+			if ( is_array( $terms ) ) {
+				foreach ( $terms as $term ) {
+					$names[] = $term->name;
+				}
+			}
+		}
+		if ( $names ) {
+			$map[ $post_id ] = $names;
+		}
+	}
+
+	return $map;
+}
+
 function addon_filtros_hbook_enqueue_assets() {
 	wp_register_style(
 		'addon-filtros-hbook-public',
@@ -188,19 +231,6 @@ function addon_filtros_hbook_enqueue_assets() {
 		true
 	);
 
-	wp_localize_script(
-		'addon-filtros-hbook-public',
-		'AddonFiltrosHbook',
-		array(
-			'ajaxUrl' => admin_url( 'admin-ajax.php' ),
-			'nonce'   => wp_create_nonce( 'addon_filtros_hbook_nonce' ),
-			'i18n'    => array(
-				'noResults' => __( 'No se han encontrado alojamientos con esas características.', 'addon-filtros-hbook' ),
-				'error'     => __( 'Ha ocurrido un error al cargar los resultados. Inténtalo de nuevo.', 'addon-filtros-hbook' ),
-			),
-		)
-	);
-
 	global $post;
 	$should_enqueue = ( $post instanceof WP_Post ) && has_shortcode( $post->post_content, 'addon_filtros_hbook' );
 
@@ -210,10 +240,26 @@ function addon_filtros_hbook_enqueue_assets() {
 	 */
 	$should_enqueue = apply_filters( 'addon_filtros_hbook_should_enqueue', $should_enqueue );
 
-	if ( $should_enqueue ) {
-		wp_enqueue_style( 'addon-filtros-hbook-public' );
-		wp_enqueue_script( 'addon-filtros-hbook-public' );
+	if ( ! $should_enqueue ) {
+		return;
 	}
+
+	wp_localize_script(
+		'addon-filtros-hbook-public',
+		'AddonFiltrosHbook',
+		array(
+			'ajaxUrl'   => admin_url( 'admin-ajax.php' ),
+			'nonce'     => wp_create_nonce( 'addon_filtros_hbook_nonce' ),
+			'badgesMap' => addon_filtros_hbook_get_accom_badges_map(),
+			'i18n'      => array(
+				'noResults' => __( 'No se han encontrado alojamientos con esas características.', 'addon-filtros-hbook' ),
+				'error'     => __( 'Ha ocurrido un error al cargar los resultados. Inténtalo de nuevo.', 'addon-filtros-hbook' ),
+			),
+		)
+	);
+
+	wp_enqueue_style( 'addon-filtros-hbook-public' );
+	wp_enqueue_script( 'addon-filtros-hbook-public' );
 }
 add_action( 'wp_enqueue_scripts', 'addon_filtros_hbook_enqueue_assets' );
 
