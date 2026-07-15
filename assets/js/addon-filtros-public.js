@@ -13,7 +13,11 @@
  * 2. Observa el contenedor `.hb-accom-list` que HBook rellena tras su
  *    propia búsqueda (ver HBook: `$booking_wrapper.find('.hb-accom-list').html(response.mark_up)`)
  *    y oculta (display:none, de forma reversible) las tarjetas
- *    (`[data-accom-id]`) que no estén en esa lista.
+ *    (`.hb-accom[data-accom-id]`) que no estén en esa lista. Importante:
+ *    el selector va con `.hb-accom` y no solo `[data-accom-id]`, porque
+ *    HBook también pone ese mismo atributo en un `.hb-accom-quantity`
+ *    oculto (uno por alojamiento), que un selector genérico contaría
+ *    igualmente y desajustaría cualquier recuento de tarjetas visibles.
  * 3. Inyecta badges informativos (las características de cada alojamiento)
  *    en cada tarjeta, a partir de datos ya asignados en WordPress
  *    (AddonFiltrosHbook.badgesMap), sin inventar nada.
@@ -114,7 +118,7 @@
 			if ( ! resultsList ) {
 				return;
 			}
-			var cards = resultsList.querySelectorAll( '[data-accom-id]' );
+			var cards = resultsList.querySelectorAll( '.hb-accom[data-accom-id]' );
 			if ( ! cards.length ) {
 				toggleNoMatchMessage( false );
 				return;
@@ -141,7 +145,7 @@
 			if ( ! resultsList ) {
 				return;
 			}
-			var cards = resultsList.querySelectorAll( '[data-accom-id]' );
+			var cards = resultsList.querySelectorAll( '.hb-accom[data-accom-id]' );
 			cards.forEach( function ( card ) {
 				if ( card.querySelector( '.addon-filtros-card-badges' ) ) {
 					return;
@@ -212,7 +216,7 @@
 			var adultsField = wrapper.querySelector( 'select#adults, select.hb-adults' );
 			var childrenField = wrapper.querySelector( 'select#children, select.hb-children' );
 
-			var cards = resultsList.querySelectorAll( '[data-accom-id]' );
+			var cards = resultsList.querySelectorAll( '.hb-accom[data-accom-id]' );
 			cards.forEach( function ( card ) {
 				var id = card.getAttribute( 'data-accom-id' );
 				var link = linksMap[ id ];

@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.9
+
+- Encontrado un fallo real de conteo: HBook pone `data-accom-id` no solo en cada tarjeta (`.hb-accom`), sino también en un `.hb-accom-quantity` oculto que genera por cada alojamiento (y, en algunos casos, en un `<select>` interno). El selector genérico `[data-accom-id]` que usaba el addon para contar/filtrar tarjetas contaba también esos elementos ocultos, desajustando el recuento (incluido el de la frase "Hemos encontrado X..."). Corregido restringiendo el selector a `.hb-accom[data-accom-id]` en todo el script (filtro de visibilidad, badges, botón "Reservar" y conteo).
+
 ## 2.0.8
 
 - La frase de HBook "Hemos encontrado X tipos de alojamiento..." mostraba siempre el conteo de la búsqueda real (antes del filtro de características), no el número de tarjetas que quedaban visibles tras filtrar. Ahora, al aplicar el filtro, se sustituye el número dentro de esa misma frase por el conteo visible real (sin tocar el resto del texto ni inventar traducción), y se restaura el texto original de HBook tal cual si se quitan todos los filtros.
