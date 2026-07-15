@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.7
+
+- Marcar dos o más características (p. ej. "Admite mascotas" + "Piscina") funcionaba como OR (mostraba alojamientos con cualquiera de las dos) en vez de AND (solo los que tienen ambas). Al vivir todas las características en la misma taxonomía, se agrupaban en un único bloque `tax_query` con `operator => IN`, que WordPress interpreta como "tiene este término O este otro". Ahora cada característica marcada va en su propio bloque, todos combinados con AND, así que cada una pasa a ser obligatoria — sumen las que sumen.
+
 ## 2.0.6
 
 - Las fechas y personas se rellenaban bien, pero era "como si no se pulsara Buscar": el cierre forzado del calendario emergente (añadido en la 2.0.5) podía fallar a mitad de camino, y al ser código síncrono, un error ahí cortaba la ejecución antes de llegar al clic en "Buscar". Ahora esa parte va protegida en un try/catch (si falla, se avisa por consola pero se continúa igualmente) y el clic en "Buscar" se lanza en una tarea aparte, para no depender de que termine ninguna animación pendiente del calendario.

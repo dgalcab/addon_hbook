@@ -204,14 +204,26 @@ class Addon_Filtros_Hbook_Engine {
 			);
 		}
 
+		/*
+		 * Cada característica marcada debe ser obligatoria (AND), no
+		 * "cualquiera de las marcadas" (OR): un alojamiento con "Piscina" +
+		 * "Admite mascotas" marcados debe tener AMBAS, no una de las dos.
+		 * Por eso cada término va en su PROPIO bloque de tax_query, aunque
+		 * varios pertenezcan a la misma taxonomía — si se agruparan varios
+		 * términos en un mismo bloque con 'operator' => 'IN', WordPress los
+		 * trataría como "tiene este término O este otro" dentro de ese
+		 * bloque, que es precisamente el comportamiento que no queremos.
+		 */
 		$tax_query = array( 'relation' => 'AND' );
 		foreach ( $selected_terms as $taxonomy => $slugs ) {
-			$tax_query[] = array(
-				'taxonomy' => $taxonomy,
-				'field'    => 'slug',
-				'terms'    => $slugs,
-				'operator' => 'IN',
-			);
+			foreach ( $slugs as $slug ) {
+				$tax_query[] = array(
+					'taxonomy' => $taxonomy,
+					'field'    => 'slug',
+					'terms'    => array( $slug ),
+					'operator' => 'IN',
+				);
+			}
 		}
 
 		$args = array(
