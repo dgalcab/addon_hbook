@@ -47,6 +47,49 @@
 		var noMatchMessage = null;
 		var currentRequest = null;
 
+		// Frase de HBook tipo "Hemos encontrado 20 tipos de alojamiento...":
+		// se guarda el texto ORIGINAL (con el conteo real de HBook, antes de
+		// aplicar el filtro de características) cada vez que HBook renderiza
+		// resultados nuevos, para poder restaurarlo tal cual si se quitan
+		// todos los filtros.
+		var introElement = null;
+		var introOriginalText = null;
+
+		function captureIntroText() {
+			if ( ! resultsList ) {
+				return;
+			}
+			// Solo se recaptura si el nodo ha cambiado de verdad (una
+			// búsqueda nueva de HBook sustituye por completo el HTML, así
+			// que crea un <p> nuevo). Esto evita recapturar un texto que
+			// este propio script ya haya modificado, en las veces que el
+			// MutationObserver se dispara por sus propios cambios (p.ej. al
+			// añadir/quitar el mensaje de "sin resultados").
+			var el = resultsList.querySelector( '.hb-search-result-title-section p' );
+			if ( el !== introElement ) {
+				introElement = el;
+				introOriginalText = el ? el.textContent : null;
+			}
+		}
+
+		/**
+		 * Sustituye el número dentro de esa frase por la cantidad de
+		 * tarjetas que quedan visibles tras aplicar el filtro de
+		 * características, sin tocar el resto del texto (ni inventar
+		 * traducciones): si no hay filtro activo, se restaura el texto
+		 * original de HBook tal cual.
+		 */
+		function updateIntroCount( visibleCount ) {
+			if ( ! introElement || introOriginalText === null ) {
+				return;
+			}
+			if ( allowedIds === null ) {
+				introElement.textContent = introOriginalText;
+				return;
+			}
+			introElement.textContent = introOriginalText.replace( /\d+/, String( visibleCount ) );
+		}
+
 		function toggleNoMatchMessage( show ) {
 			if ( ! resultsList ) {
 				return;
@@ -86,6 +129,7 @@
 				}
 			} );
 			toggleNoMatchMessage( visibleCount === 0 );
+			updateIntroCount( visibleCount );
 		}
 
 		/**
@@ -283,6 +327,7 @@
 		// Reaplicamos filtro + badges cada vez que eso ocurre.
 		if ( resultsList && window.MutationObserver ) {
 			var observer = new MutationObserver( function () {
+				captureIntroText();
 				injectBadges();
 				buildReservarButtons();
 				applyCharacteristicsFilter();

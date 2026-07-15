@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.8
+
+- La frase de HBook "Hemos encontrado X tipos de alojamiento..." mostraba siempre el conteo de la búsqueda real (antes del filtro de características), no el número de tarjetas que quedaban visibles tras filtrar. Ahora, al aplicar el filtro, se sustituye el número dentro de esa misma frase por el conteo visible real (sin tocar el resto del texto ni inventar traducción), y se restaura el texto original de HBook tal cual si se quitan todos los filtros.
+
 ## 2.0.7
 
 - Marcar dos o más características (p. ej. "Admite mascotas" + "Piscina") funcionaba como OR (mostraba alojamientos con cualquiera de las dos) en vez de AND (solo los que tienen ambas). Al vivir todas las características en la misma taxonomía, se agrupaban en un único bloque `tax_query` con `operator => IN`, que WordPress interpreta como "tiene este término O este otro". Ahora cada característica marcada va en su propio bloque, todos combinados con AND, así que cada una pasa a ser obligatoria — sumen las que sumen.
