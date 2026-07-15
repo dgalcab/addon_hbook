@@ -6,7 +6,7 @@
  * Version:           2.0.7
  * Requires at least: 5.8
  * Requires PHP:      7.4
- * Author:            La Casa del Torero
+ * Author:            dgalcab
  * Text Domain:       addon-filtros-hbook
  */
 
