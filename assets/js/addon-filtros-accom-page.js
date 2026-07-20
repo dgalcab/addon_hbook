@@ -9,6 +9,15 @@
  * (%2F) en la query string disparen un bloqueo/redirección del hosting).
  * Este script:
  *
+ * 0. Espera a que jQuery y el propio JS de HBook (jQuery.datepick,
+ *    hb_date_format) estén realmente cargados antes de tocar nada. En
+ *    sitios donde algún plugin de caché/optimización difiere o reordena
+ *    la carga de scripts, los campos del formulario pueden existir en el
+ *    HTML antes de que HBook haya enlazado sus propios eventos sobre
+ *    ellos — si se pulsa "Buscar" en ese momento, el navegador cae en el
+ *    envío nativo del formulario (recarga real de la página), que vuelve
+ *    a ejecutar este script desde cero: eso es lo que se percibía como
+ *    "se queda en bucle".
  * 1. Localiza los campos REALES del [hb_booking_form accom_id="X"] que ya
  *    esté incrustado en esta página (no crea ningún formulario nuevo).
  * 2. Convierte el ISO de vuelta al formato local de HBook con su propia
@@ -29,6 +38,12 @@
  *    para pasar al paso de servicios adicionales — este script lo hace
  *    por el visitante, tal cual haría él.
  *
+ * Además, como red de seguridad ante cualquier causa de recarga en bucle
+ * (conocida o no), el script se autolimita a un único intento por URL
+ * exacta durante la sesión del navegador (sessionStorage): si esta misma
+ * URL con los mismos parámetros ya se procesó una vez, no se vuelve a
+ * intentar el autorrelleno.
+ *
  * No se reimplementa ni se sustituye ninguna lógica de HBook: solo se
  * simulan las mismas acciones que haría un visitante con el teclado y el
  * ratón, sobre los campos reales.
@@ -47,8 +62,28 @@
 			return;
 		}
 
-		var MAX_ATTEMPTS = 40;
-		var RETRY_DELAY_MS = 100;
+		// Freno de seguridad: como mucho un intento de autorrelleno por
+		// cada URL exacta, por sesión de navegador. Si por cualquier
+		// motivo la página se recargara con los mismos parámetros (bucle),
+		// esta segunda ejecución no vuelve a intentar nada — se deja el
+		// buscador tal cual para que el visitante pueda usarlo a mano.
+		var storageKey = 'addonFiltrosHbookAutofill:' + window.location.href;
+		if ( window.sessionStorage ) {
+			try {
+				if ( window.sessionStorage.getItem( storageKey ) ) {
+					return;
+				}
+				window.sessionStorage.setItem( storageKey, '1' );
+			} catch ( e ) {
+				// Si sessionStorage no está disponible (p.ej. incógnito
+				// estricto), simplemente se sigue sin este freno extra.
+			}
+		}
+
+		var FIELD_MAX_ATTEMPTS = 40;
+		var FIELD_RETRY_DELAY_MS = 100;
+		var READY_MAX_ATTEMPTS = 100;
+		var READY_RETRY_DELAY_MS = 150;
 
 		/**
 		 * Convierte una fecha ISO "aaaa-mm-dd" al formato local que use
@@ -98,14 +133,14 @@
 			var checkOutField = document.querySelector( '.hb-check-out-date' );
 			var submitButton = document.querySelector( '.hb-search-submit-wrapper input[type="submit"]' );
 
-			// El formulario de HBook puede tardar un instante en montarse
-			// (sus propios scripts se cargan y ejecutan tras el DOM). Se
-			// reintenta con un pequeño margen en vez de asumir que ya existe.
+			// Los campos ya deberían existir a estas alturas (se ha
+			// esperado a que HBook esté listo antes de llamar a esta
+			// función), pero se mantiene el reintento como margen extra.
 			if ( ! checkInField || ! checkOutField || ! submitButton ) {
-				if ( attempt < MAX_ATTEMPTS ) {
+				if ( attempt < FIELD_MAX_ATTEMPTS ) {
 					setTimeout( function () {
 						fillAndSearch( attempt + 1 );
-					}, RETRY_DELAY_MS );
+					}, FIELD_RETRY_DELAY_MS );
 				}
 				return;
 			}
@@ -186,10 +221,10 @@
 			var isVisible = nextStepButton && nextStepButton.offsetParent !== null;
 
 			if ( ! isVisible ) {
-				if ( attempt < MAX_ATTEMPTS ) {
+				if ( attempt < FIELD_MAX_ATTEMPTS ) {
 					setTimeout( function () {
 						advanceToNextStep( attempt + 1 );
-					}, RETRY_DELAY_MS );
+					}, FIELD_RETRY_DELAY_MS );
 				}
 				return;
 			}
@@ -197,6 +232,39 @@
 			nextStepButton.click();
 		}
 
-		fillAndSearch();
+		/**
+		 * No basta con que los campos existan en el HTML: hace falta que
+		 * jQuery y el propio JS de HBook (jQuery.datepick, hb_date_format)
+		 * hayan terminado de cargar y enlazar sus eventos sobre esos
+		 * campos. Si un plugin de caché/optimización difiere la carga de
+		 * scripts, esto puede tardar más de lo normal — se espera con un
+		 * margen amplio (hasta 15s) antes de intentar nada.
+		 */
+		function waitForHbookReady( attempt ) {
+			attempt = attempt || 0;
+
+			var isReady =
+				typeof window.jQuery !== 'undefined' &&
+				window.jQuery.datepick &&
+				typeof window.hb_date_format !== 'undefined';
+
+			if ( isReady ) {
+				fillAndSearch();
+				return;
+			}
+
+			if ( attempt < READY_MAX_ATTEMPTS ) {
+				setTimeout( function () {
+					waitForHbookReady( attempt + 1 );
+				}, READY_RETRY_DELAY_MS );
+				return;
+			}
+
+			if ( window.console && window.console.warn ) {
+				window.console.warn( 'Addon Filtros HBook: el buscador de HBook no llegó a cargar a tiempo; no se autorrellena para evitar una recarga en bucle.' );
+			}
+		}
+
+		waitForHbookReady();
 	} );
 } )();

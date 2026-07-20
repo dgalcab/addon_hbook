@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.10
+
+- En el sitio real (con más plugins/optimización de carga que en las pruebas anteriores) volvió a aparecer el "bucle": la consola mostraba errores de `wp is not defined` en otros scripts del sitio, señal de que la carga de scripts va desordenada/diferida ahí. El script de autorrelleno encontraba los campos de fecha en el HTML antes de que el propio JS de HBook (jQuery.datepick, el manejador del envío del formulario) hubiera terminado de cargar; al pulsar "Buscar" en ese momento, el navegador caía en el envío nativo del formulario — una recarga real de la página, que volvía a ejecutar el script desde cero y repetía el problema.
+  - Ahora se espera explícitamente (hasta 15s) a que `jQuery`, `jQuery.datepick` y `hb_date_format` estén realmente disponibles antes de tocar ningún campo.
+  - Además, como red de seguridad ante cualquier otra causa de recarga en bucle, el script ahora se autolimita a un único intento por URL exacta y por sesión de navegador (sessionStorage): si la misma URL se cargara dos veces, la segunda vez no se reintenta nada.
+
 ## 2.0.9
 
 - Encontrado un fallo real de conteo: HBook pone `data-accom-id` no solo en cada tarjeta (`.hb-accom`), sino también en un `.hb-accom-quantity` oculto que genera por cada alojamiento (y, en algunos casos, en un `<select>` interno). El selector genérico `[data-accom-id]` que usaba el addon para contar/filtrar tarjetas contaba también esos elementos ocultos, desajustando el recuento (incluido el de la frase "Hemos encontrado X..."). Corregido restringiendo el selector a `.hb-accom[data-accom-id]` en todo el script (filtro de visibilidad, badges, botón "Reservar" y conteo).
