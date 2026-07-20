@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.11
+
+- Tras arreglar la caché de Themify, el bucle pasó a ocurrir solo una vez (la primera carga real seguía adelantándose a HBook), y la segunda vez el propio freno de seguridad (añadido en la 2.0.10 para evitar bucles infinitos) bloqueaba el reintento, dejando los campos en blanco — parecía "no coger los datos" pero en realidad eran dos problemas distintos ya diagnosticados. La causa raíz seguía siendo la comprobación de "¿está listo HBook?": comprobar que la librería `jQuery.datepick` existe no basta, porque esa librería queda definida en cuanto se carga el archivo, antes de que HBook ejecute su propia inicialización (la que realmente engancha los eventos sobre los campos de fecha). Ahora se espera a una señal fiable de que esa inicialización ya ha corrido de verdad: el propio calendario emergente de HBook (`.hb-datepick-popup-wrapper`), que HBook añade al `<body>` nada más entrar en su `jQuery(document).ready()`.
+
 ## 2.0.10
 
 - En el sitio real (con más plugins/optimización de carga que en las pruebas anteriores) volvió a aparecer el "bucle": la consola mostraba errores de `wp is not defined` en otros scripts del sitio, señal de que la carga de scripts va desordenada/diferida ahí. El script de autorrelleno encontraba los campos de fecha en el HTML antes de que el propio JS de HBook (jQuery.datepick, el manejador del envío del formulario) hubiera terminado de cargar; al pulsar "Buscar" en ese momento, el navegador caía en el envío nativo del formulario — una recarga real de la página, que volvía a ejecutar el script desde cero y repetía el problema.

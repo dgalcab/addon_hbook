@@ -233,12 +233,20 @@
 		}
 
 		/**
-		 * No basta con que los campos existan en el HTML: hace falta que
-		 * jQuery y el propio JS de HBook (jQuery.datepick, hb_date_format)
-		 * hayan terminado de cargar y enlazar sus eventos sobre esos
-		 * campos. Si un plugin de caché/optimización difiere la carga de
-		 * scripts, esto puede tardar más de lo normal — se espera con un
-		 * margen amplio (hasta 15s) antes de intentar nada.
+		 * No basta con comprobar que jQuery y la librería jQuery.datepick
+		 * existen: esa librería se define nada más cargarse el archivo, ANTES
+		 * de que HBook ejecute su propia inicialización (hb-datepick.js,
+		 * dentro de un jQuery(document).ready) — que es lo que realmente
+		 * engancha los eventos "focus"/"keyup" sobre .hb-check-in-date y
+		 * .hb-check-out-date. Comprobar solo la librería puede dar un falso
+		 * positivo si esa inicialización todavía no ha corrido.
+		 *
+		 * La señal fiable es otra: nada más entrar a ese
+		 * jQuery(document).ready(), hb-datepick.js añade al final de <body>
+		 * el propio calendario emergente (.hb-datepick-popup-wrapper) — ver
+		 * utils/jq-datepick/js/hb-datepick.js de HBook, líneas 57-72. Si ese
+		 * elemento existe, la inicialización de HBook ya ha corrido de
+		 * verdad y es seguro tocar los campos.
 		 */
 		function waitForHbookReady( attempt ) {
 			attempt = attempt || 0;
@@ -246,7 +254,8 @@
 			var isReady =
 				typeof window.jQuery !== 'undefined' &&
 				window.jQuery.datepick &&
-				typeof window.hb_date_format !== 'undefined';
+				typeof window.hb_date_format !== 'undefined' &&
+				document.querySelector( '.hb-datepick-popup-wrapper' ) !== null;
 
 			if ( isReady ) {
 				fillAndSearch();
