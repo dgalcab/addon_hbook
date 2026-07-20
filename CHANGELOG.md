@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.1
+
+- Más aire en la caja de búsqueda en móvil: más padding interior de la tarjeta, más separación entre los campos apilados, entre el bloque de características y el botón "Buscar", y el propio botón "Buscar" pasa a ocupar todo el ancho (más cómodo de pulsar y más acorde con el resto del diseño).
+
 ## 2.1.0
 
 - En móvil, las características ahora aparecen **después** de los campos de fecha/personas y **antes** del botón "Buscar" (antes iban siempre delante de todo, igual que en escritorio). En escritorio se mantiene el diseño actual (fila propia encima de los campos).

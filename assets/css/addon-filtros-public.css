@@ -42,7 +42,7 @@
 	border: 1px solid var(--addon-border);
 	border-radius: var(--addon-radius);
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-	padding: 24px;
+	padding: 28px 20px 32px;
 }
 
 @media (min-width: 768px) {
@@ -209,6 +209,10 @@
 ══════════════════════════════════════════════ */
 
 @media (max-width: 767.98px) {
+	#addon-filtros-wrapper .hb-search-fields {
+		gap: 20px;
+	}
+
 	#addon-filtros-wrapper .hb-search-fields > p {
 		flex-basis: 100%;
 	}
@@ -216,31 +220,37 @@
 	#addon-filtros-wrapper .addon-filtros-pills-form {
 		order: 5;
 		flex-basis: 100%;
-		margin: 4px 0 16px;
-		padding: 16px 0 0;
+		margin: 8px 0 20px;
+		padding: 20px 0 0;
 		border-bottom: none;
 		border-top: 1px solid var(--addon-border);
-		gap: 6px 8px;
+		gap: 8px 10px;
 	}
 
 	#addon-filtros-wrapper .addon-filtros-pill-group {
-		gap: 6px;
+		gap: 8px;
 	}
 
 	#addon-filtros-wrapper .addon-filtros-pill-group-label {
 		flex-basis: 100%;
 		font-size: 11px;
-		margin-bottom: 2px;
+		margin-bottom: 4px;
 	}
 
 	#addon-filtros-wrapper .addon-filtros-pill {
-		padding: 6px 12px;
+		padding: 7px 13px;
 		font-size: 13px;
 		gap: 4px;
 	}
 
 	#addon-filtros-wrapper .hb-search-submit-wrapper {
 		flex-basis: 100%;
+		margin-top: 4px;
+	}
+
+	#addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"] {
+		width: 100%;
+		padding: 14px 28px;
 	}
 }
 
