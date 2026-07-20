@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0
+
+- En móvil, las características ahora aparecen **después** de los campos de fecha/personas y **antes** del botón "Buscar" (antes iban siempre delante de todo, igual que en escritorio). En escritorio se mantiene el diseño actual (fila propia encima de los campos).
+  - El bloque de características ya no es un `<form>` sino un `<div>`: el JS lo reubica dentro del propio `<form>` de HBook para poder reordenarlo por CSS (`order`) según el tamaño de pantalla, y un `<form>` anidado dentro de otro es HTML inválido.
+  - Se sustituye el maquetado por floats que usa HBook para esos campos por flexbox (mismo HTML, solo CSS), lo que permite controlar el orden visual sin duplicar nada ni tocar la lógica de HBook.
+- Las pills de características se ven más compactas en móvil (menos relleno, texto más pequeño), para que ocupen menos espacio vertical.
+
 ## 2.0.11
 
 - Tras arreglar la caché de Themify, el bucle pasó a ocurrir solo una vez (la primera carga real seguía adelantándose a HBook), y la segunda vez el propio freno de seguridad (añadido en la 2.0.10 para evitar bucles infinitos) bloqueaba el reintento, dejando los campos en blanco — parecía "no coger los datos" pero en realidad eran dos problemas distintos ya diagnosticados. La causa raíz seguía siendo la comprobación de "¿está listo HBook?": comprobar que la librería `jQuery.datepick` existe no basta, porque esa librería queda definida en cuanto se carga el archivo, antes de que HBook ejecute su propia inicialización (la que realmente engancha los eventos sobre los campos de fecha). Ahora se espera a una señal fiable de que esa inicialización ya ha corrido de verdad: el propio calendario emergente de HBook (`.hb-datepick-popup-wrapper`), que HBook añade al `<body>` nada más entrar en su `jQuery(document).ready()`.

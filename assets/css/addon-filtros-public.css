@@ -51,6 +51,15 @@
 	}
 }
 
+/*
+ * El JS (relocatePillsIntoSearchFields en addon-filtros-public.js) mueve
+ * este bloque para que sea un hijo más de .hb-search-fields (donde HBook
+ * ya tiene, cada uno en su propio <p>, los campos de fecha/personas y el
+ * botón "Buscar"). Así, con "order" y sin duplicar HTML, se puede decidir
+ * su posición por punto de ruptura: en escritorio va delante de todo
+ * (order: -1, como una fila propia); en móvil, entre los campos y el
+ * botón "Buscar" (ver la media query de .hb-search-fields más abajo).
+ */
 .addon-filtros-pills-form {
 	display: flex;
 	flex-wrap: wrap;
@@ -59,6 +68,8 @@
 	margin-bottom: 20px;
 	padding-bottom: 20px;
 	border-bottom: 1px solid var(--addon-border);
+	order: -1;
+	flex-basis: 100%;
 }
 
 .addon-filtros-pill-group {
@@ -148,6 +159,33 @@
 	gap: 16px;
 }
 
+/*
+ * HBook maqueta .hb-search-fields (y cada campo dentro de él) con floats
+ * y anchos en % (ver front-end/css/hbook.css: p.hb-check-dates-wrapper,
+ * p.hb-people-wrapper, p.hb-search-button-wrapper { float: left; ... }).
+ * Aquí se sustituye por flexbox, sin tocar el HTML de HBook, para poder
+ * usar "order" y reordenar el bloque de características (que el JS mueve
+ * a este mismo contenedor) sin duplicar nada.
+ */
+#addon-filtros-wrapper .hb-search-fields {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 16px;
+}
+
+#addon-filtros-wrapper .hb-search-fields > p {
+	float: none;
+	margin-right: 0;
+	width: auto;
+	flex: 1 1 150px;
+}
+
+#addon-filtros-wrapper .hb-search-submit-wrapper {
+	order: 10;
+	flex: 0 0 auto;
+}
+
 #addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"],
 #addon-filtros-wrapper .hb-change-search-wrapper input[type="submit"] {
 	background: var(--addon-accent);
@@ -163,6 +201,47 @@
 #addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"]:hover,
 #addon-filtros-wrapper .hb-change-search-wrapper input[type="submit"]:hover {
 	background: var(--addon-accent-hover);
+}
+
+/* ══════════════════════════════════════════════
+   MÓVIL: características entre los campos y "Buscar",
+   en formato compacto
+══════════════════════════════════════════════ */
+
+@media (max-width: 767.98px) {
+	#addon-filtros-wrapper .hb-search-fields > p {
+		flex-basis: 100%;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pills-form {
+		order: 5;
+		flex-basis: 100%;
+		margin: 4px 0 16px;
+		padding: 16px 0 0;
+		border-bottom: none;
+		border-top: 1px solid var(--addon-border);
+		gap: 6px 8px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pill-group {
+		gap: 6px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pill-group-label {
+		flex-basis: 100%;
+		font-size: 11px;
+		margin-bottom: 2px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pill {
+		padding: 6px 12px;
+		font-size: 13px;
+		gap: 4px;
+	}
+
+	#addon-filtros-wrapper .hb-search-submit-wrapper {
+		flex-basis: 100%;
+	}
 }
 
 /* ══════════════════════════════════════════════

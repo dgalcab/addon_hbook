@@ -41,6 +41,32 @@
 		}
 
 		var form = document.getElementById( 'addon-filtros-form' );
+
+		/**
+		 * Mueve el bloque de pills de características para que sea un
+		 * hijo más de .hb-search-fields (donde HBook ya tiene, cada uno en
+		 * su propio <p>, los campos de fecha/personas y el botón "Buscar"),
+		 * en vez de quedarse fuera, antes de todo el bloque. Es un
+		 * MOVIMIENTO real del nodo (no una copia), así que los checkboxes
+		 * conservan sus eventos ya enlazados.
+		 *
+		 * Esto permite, con una sola regla CSS por punto de ruptura
+		 * (ver addon-filtros-public.css), decidir el ORDEN visual de las
+		 * pills sin duplicar HTML: en escritorio siguen viéndose como una
+		 * fila propia encima de los campos; en móvil se colocan entre los
+		 * campos de fecha/personas y el botón "Buscar".
+		 */
+		function relocatePillsIntoSearchFields() {
+			if ( ! form ) {
+				return;
+			}
+			var hbSearchFields = wrapper.querySelector( '.hb-search-fields' );
+			if ( hbSearchFields ) {
+				hbSearchFields.appendChild( form );
+			}
+		}
+		relocatePillsIntoSearchFields();
+
 		var resultsList = wrapper.querySelector( '.hb-accom-list' );
 		var checkboxes = form ? Array.prototype.slice.call( form.querySelectorAll( 'input[type="checkbox"]' ) ) : [];
 		var badgesMap = window.AddonFiltrosHbook.badgesMap || {};

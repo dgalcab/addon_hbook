@@ -90,6 +90,11 @@ class Addon_Filtros_Hbook_Engine {
 	 * visualmente con los campos de fecha/personas de HBook en un único
 	 * bloque de búsqueda. Un grupo de pills por cada taxonomía realmente
 	 * registrada contra hb_accommodation (ver addon_filtros_hbook_get_taxonomies()).
+	 *
+	 * Es un <div>, no un <form>: el JS lo reubica dentro del propio
+	 * formulario de HBook (.hb-search-fields) para poder reordenarlo en
+	 * móvil entre los campos y el botón "Buscar" — un <form> anidado
+	 * dentro de otro <form> es HTML inválido y el navegador lo rompería.
 	 */
 	private static function render_pills_row() {
 		$taxonomies = addon_filtros_hbook_get_taxonomies();
@@ -101,7 +106,7 @@ class Addon_Filtros_Hbook_Engine {
 		$has_terms = false;
 		ob_start();
 		?>
-		<form id="addon-filtros-form" class="addon-filtros-pills-form">
+		<div id="addon-filtros-form" class="addon-filtros-pills-form">
 			<?php
 			foreach ( $taxonomies as $taxonomy ) {
 				$group_markup = self::render_taxonomy_group( $taxonomy );
@@ -111,7 +116,7 @@ class Addon_Filtros_Hbook_Engine {
 				}
 			}
 			?>
-		</form>
+		</div>
 		<?php
 		$markup = ob_get_clean();
 
