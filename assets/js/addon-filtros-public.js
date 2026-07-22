@@ -442,6 +442,48 @@
 			fetchAllowedIds();
 		} );
 
+		/*
+		 * IMPORTANTE — por qué gestionamos el clic nosotros y no confiamos en
+		 * el toggle nativo del <label>:
+		 *
+		 * Diagnóstico en vivo en este sitio: al hacer clic REAL en un chip, el
+		 * evento es de confianza (isTrusted), NADIE hace preventDefault sobre
+		 * él... y aun así la casilla no cambia. En cambio, marcarla por código
+		 * (checkbox.click()) sí funciona. Eso es el patrón típico de temas que
+		 * "estilizan" checkboxes bloqueando el clic sintético de confianza que
+		 * el <label> envía al <input> real (pero dejando pasar los clics por
+		 * script). Resultado: el toggle nativo del label no llega a ocurrir.
+		 *
+		 * Por eso no dependemos de ese comportamiento nativo: interceptamos el
+		 * clic sobre el chip, anulamos la acción por defecto del label (para no
+		 * provocar un doble toggle allí donde SÍ funcionara) y alternamos la
+		 * casilla por código —que es justo lo que hemos comprobado que funciona—
+		 * disparando después 'change' para que el filtro se aplique por la vía
+		 * habitual (la delegación de 'change' de arriba). Funciona igual con
+		 * ratón y con teclado (Espacio sobre el chip enfocado).
+		 */
+		wrapper.addEventListener( 'click', function ( event ) {
+			var target = event.target;
+			if ( ! target || ! target.closest ) {
+				return;
+			}
+			// El botón "Limpiar" tiene su propio manejador más abajo.
+			if ( target.closest( '#addon-filtros-clear-btn' ) ) {
+				return;
+			}
+			var pill = target.closest( '.addon-filtros-pill' );
+			if ( ! pill ) {
+				return;
+			}
+			var checkbox = pill.querySelector( '.addon-filtros-pill-input' );
+			if ( ! checkbox ) {
+				return;
+			}
+			event.preventDefault();
+			checkbox.checked = ! checkbox.checked;
+			checkbox.dispatchEvent( new Event( 'change', { bubbles: true } ) );
+		} );
+
 		syncAllPillStates();
 		updateClearButtonVisibility();
 

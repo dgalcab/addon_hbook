@@ -3,7 +3,7 @@
  * Plugin Name:       Addon Filtros HBook
  * Plugin URI:        https://github.com/dgalcab/addon_hbook
  * Description:       Addon independiente que añade un buscador de alojamientos con filtros combinables por AJAX para el Custom Post Type "hb_accommodation" de HBook. Shortcode: [addon_filtros_hbook].
- * Version:           2.3.1
+ * Version:           2.3.2
  * Requires at least: 5.8
  * Requires PHP:      7.4
  * Author:            dgalcab
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
    CONSTANTES DEL ADDON
 ══════════════════════════════════════════════ */
 
-define( 'ADDON_FILTROS_HBOOK_VERSION', '2.3.1' );
+define( 'ADDON_FILTROS_HBOOK_VERSION', '2.3.2' );
 define( 'ADDON_FILTROS_HBOOK_FILE', __FILE__ );
 define( 'ADDON_FILTROS_HBOOK_PATH', plugin_dir_path( __FILE__ ) );
 define( 'ADDON_FILTROS_HBOOK_URL', plugin_dir_url( __FILE__ ) );

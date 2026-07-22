@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.2
+
+- **Arreglo definitivo de "pulso una característica y no se marca"**, diagnosticado en vivo en el sitio real: al hacer clic REAL sobre un chip, el evento es de confianza y NADIE hace `preventDefault`… pero la casilla no cambia; en cambio, marcarla por código (`checkbox.click()`) sí funciona. Es el patrón típico de temas que "estilizan" los checkboxes bloqueando el clic sintético de confianza que el `<label>` envía al `<input>` (dejando pasar los clics por script). Solución: el addon ya no depende del toggle nativo del `<label>` — intercepta el clic sobre el chip, anula la acción por defecto (para no duplicar el toggle allí donde sí funcione) y alterna la casilla por código, disparando después `change` para aplicar el filtro por la vía habitual. Funciona igual con ratón y con teclado.
+
 ## 2.3.1
 
 - **Causa raíz de que "pulso una característica y no hace nada"**: este sitio optimiza/difiere la carga de scripts (se ve en la consola por los errores `wp is not defined` en wp-i18n y Contact Form 7). Si el optimizador carga nuestro script como `async` o lo inyecta tarde, el DOM ya está parseado cuando corre y el evento `DOMContentLoaded` **ya se ha disparado** — así que todo lo que colgaba de ese evento (colocar las pills, enganchar los clics, mostrar el bloque) no se ejecutaba nunca. Ahora la inicialización no depende solo de `DOMContentLoaded`: si el DOM ya está listo cuando corre el script, arranca de inmediato, y además se añade `load` como último respaldo. La inicialización es idempotente (solo corre una vez aunque se dispare por varias vías) y, si los datos aún no están, reintenta en el respaldo.
