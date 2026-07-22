@@ -106,20 +106,49 @@ class Addon_Filtros_Hbook_Engine {
 			return '';
 		}
 
-		$groups_markup = '';
+		// Se renderiza cada grupo primero para saber cuántos tienen términos
+		// de verdad: si al final solo hay UN grupo, su etiqueta interna es
+		// redundante con la cabecera "Filtrar por características" y se omite
+		// (más limpio). Si hay varios, cada grupo muestra su propia etiqueta
+		// para poder distinguirlos.
+		$groups = array();
 		foreach ( $taxonomies as $taxonomy ) {
-			$groups_markup .= self::render_taxonomy_group( $taxonomy );
+			$terms = get_terms(
+				array(
+					'taxonomy'   => $taxonomy,
+					'hide_empty' => true,
+				)
+			);
+			if ( is_wp_error( $terms ) || empty( $terms ) ) {
+				continue;
+			}
+			$groups[] = array(
+				'taxonomy' => $taxonomy,
+				'terms'    => $terms,
+			);
 		}
 
-		if ( '' === $groups_markup ) {
+		if ( empty( $groups ) ) {
 			return '';
+		}
+
+		$show_group_labels = count( $groups ) > 1;
+
+		$groups_markup = '';
+		foreach ( $groups as $group ) {
+			$groups_markup .= self::render_taxonomy_group( $group['taxonomy'], $group['terms'], $show_group_labels );
 		}
 
 		ob_start();
 		?>
-		<div id="addon-filtros-form" class="addon-filtros-pills-form">
+		<div id="addon-filtros-form" class="addon-filtros-pills-form" role="group" aria-label="<?php esc_attr_e( 'Filtrar alojamientos por características', 'addon-filtros-hbook' ); ?>">
 			<div class="addon-filtros-pills-header">
-				<span class="addon-filtros-pills-title"><?php esc_html_e( 'Filtrar por características', 'addon-filtros-hbook' ); ?></span>
+				<span class="addon-filtros-pills-title">
+					<svg class="addon-filtros-pills-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+						<path d="M3 5h18M6 12h12M10 19h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+					</svg>
+					<?php esc_html_e( 'Filtrar por características', 'addon-filtros-hbook' ); ?>
+				</span>
 				<button type="button" id="addon-filtros-clear-btn" class="addon-filtros-clear-btn">
 					<?php esc_html_e( 'Limpiar', 'addon-filtros-hbook' ); ?>
 				</button>
@@ -136,39 +165,42 @@ class Addon_Filtros_Hbook_Engine {
 	 * Renderiza un grupo de pills (checkboxes estilizados como chips) para
 	 * una taxonomía concreta.
 	 *
-	 * @param string $taxonomy Slug de la taxonomía, ya verificado como registrado.
+	 * @param string    $taxonomy    Slug de la taxonomía, ya verificado como registrado.
+	 * @param WP_Term[] $terms       Términos ya consultados (con hide_empty).
+	 * @param bool      $show_label  Si mostrar la etiqueta de la taxonomía como
+	 *                               sub-cabecera del grupo (solo cuando hay
+	 *                               más de una taxonomía; con una sola es
+	 *                               redundante con la cabecera del panel).
 	 */
-	private static function render_taxonomy_group( $taxonomy ) {
-		$terms = get_terms(
-			array(
-				'taxonomy'   => $taxonomy,
-				'hide_empty' => true,
-			)
-		);
-
-		if ( is_wp_error( $terms ) || empty( $terms ) ) {
-			return '';
-		}
-
+	private static function render_taxonomy_group( $taxonomy, $terms, $show_label = false ) {
 		$taxonomy_object = get_taxonomy( $taxonomy );
 		$label           = $taxonomy_object ? $taxonomy_object->labels->name : $taxonomy;
 
 		ob_start();
 		?>
 		<div class="addon-filtros-pill-group" data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>">
-			<span class="addon-filtros-pill-group-label"><?php echo esc_html( $label ); ?>:</span>
-			<?php foreach ( $terms as $term ) : ?>
-				<label class="addon-filtros-pill">
-					<input
-						type="checkbox"
-						class="addon-filtros-pill-input"
-						name="addon_filtros[<?php echo esc_attr( $taxonomy ); ?>][]"
-						value="<?php echo esc_attr( $term->slug ); ?>"
-						data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>"
-					>
-					<span class="addon-filtros-pill-label"><?php echo esc_html( $term->name ); ?></span>
-				</label>
-			<?php endforeach; ?>
+			<?php if ( $show_label ) : ?>
+				<span class="addon-filtros-pill-group-label"><?php echo esc_html( $label ); ?></span>
+			<?php endif; ?>
+			<div class="addon-filtros-pill-list">
+				<?php foreach ( $terms as $term ) : ?>
+					<label class="addon-filtros-pill">
+						<input
+							type="checkbox"
+							class="addon-filtros-pill-input"
+							name="addon_filtros[<?php echo esc_attr( $taxonomy ); ?>][]"
+							value="<?php echo esc_attr( $term->slug ); ?>"
+							data-taxonomy="<?php echo esc_attr( $taxonomy ); ?>"
+						>
+						<span class="addon-filtros-pill-check" aria-hidden="true">
+							<svg width="14" height="14" viewBox="0 0 24 24" fill="none" focusable="false">
+								<path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+							</svg>
+						</span>
+						<span class="addon-filtros-pill-label"><?php echo esc_html( $term->name ); ?></span>
+					</label>
+				<?php endforeach; ?>
+			</div>
 		</div>
 		<?php
 		return ob_get_clean();

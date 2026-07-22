@@ -390,6 +390,10 @@
 			}
 		}
 
+		function syncAllPillStates() {
+			checkboxes.forEach( updatePillState );
+		}
+
 		/**
 		 * El botón "Limpiar" solo se muestra si hay alguna característica
 		 * marcada (si no hay nada que limpiar, no aporta y solo ocupa sitio).
@@ -404,32 +408,56 @@
 			clearBtn.classList.toggle( 'is-visible', anyChecked );
 		}
 
-		checkboxes.forEach( function ( checkbox ) {
-			updatePillState( checkbox );
-			checkbox.addEventListener( 'change', function () {
-				updatePillState( checkbox );
-				updateClearButtonVisibility();
-				fetchAllowedIds();
-			} );
+		/*
+		 * IMPORTANTE — por qué DELEGACIÓN de eventos y no un listener por
+		 * checkbox:
+		 *
+		 * El bloque de características (#addon-filtros-form) se MUEVE por el
+		 * DOM (positionFormBeforeResultsList) y convive dentro del wrapper de
+		 * HBook, cuyo JS y el propio tema pueden reordenar/reenvolver nodos.
+		 * Enganchar un listener a cada <input> concreto es frágil: si por
+		 * cualquier motivo (caché sirviendo un HTML distinto, un re-render del
+		 * tema, un move que rehace nodos) el checkbox sobre el que se pulsa no
+		 * es EXACTAMENTE el nodo al que se enganchó el listener, el clic "no
+		 * hace nada" — que es justo el síntoma que se estaba dando.
+		 *
+		 * Con delegación, el listener vive en #addon-filtros-wrapper (un
+		 * ancestro estable que nunca se sustituye) y captura el evento
+		 * "change" de CUALQUIER .addon-filtros-pill-input, exista ya o se
+		 * inserte después. Es inmune a todo lo anterior.
+		 */
+		wrapper.addEventListener( 'change', function ( event ) {
+			var target = event.target;
+			if ( ! target || ! target.classList || ! target.classList.contains( 'addon-filtros-pill-input' ) ) {
+				return;
+			}
+			updatePillState( target );
+			updateClearButtonVisibility();
+			fetchAllowedIds();
 		} );
+
+		syncAllPillStates();
 		updateClearButtonVisibility();
 
-		// Filtrado instantáneo: al marcar/desmarcar se pide de inmediato la
-		// lista de IDs al endpoint del addon (sin esperar a ningún envío de
-		// formulario), así que la selección se refleja en tiempo real.
-		if ( clearBtn ) {
-			clearBtn.addEventListener( 'click', function () {
-				checkboxes.forEach( function ( checkbox ) {
-					if ( checkbox.checked ) {
-						checkbox.checked = false;
-						updatePillState( checkbox );
-					}
-				} );
-				updateClearButtonVisibility();
-				allowedIds = null;
-				applyCharacteristicsFilter();
+		/*
+		 * "Limpiar": también por delegación, por el mismo motivo de robustez.
+		 * Desmarca todo sin lanzar AJAX (allowedIds vuelve a null = sin filtro)
+		 * y reaplica al instante.
+		 */
+		wrapper.addEventListener( 'click', function ( event ) {
+			var target = event.target;
+			if ( ! target || ! target.closest || ! target.closest( '#addon-filtros-clear-btn' ) ) {
+				return;
+			}
+			event.preventDefault();
+			checkboxes.forEach( function ( checkbox ) {
+				checkbox.checked = false;
 			} );
-		}
+			syncAllPillStates();
+			updateClearButtonVisibility();
+			allowedIds = null;
+			applyCharacteristicsFilter();
+		} );
 
 		// HBook sustituye por completo el contenido de .hb-accom-list en
 		// cada búsqueda de fechas (ver accommodation-list.js/booking-form.js

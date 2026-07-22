@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.3.0
+
+Rediseño del panel de características y arreglo de fondo del filtro que "no seleccionaba":
+
+- **Los chips no respondían al pulsarlos** (ni se marcaban ni filtraban). El filtro dependía de enganchar un listener a cada checkbox concreto; como el panel se MUEVE por el DOM y convive dentro del wrapper de HBook (que su propio JS y el tema pueden reordenar), bastaba con que el nodo pulsado no fuera exactamente el mismo al que se enganchó el listener para que el clic no hiciera nada. Ahora se usa **delegación de eventos** sobre `#addon-filtros-wrapper` (un ancestro estable que nunca se sustituye): captura el `change` de cualquier chip, exista ya o se inserte después — inmune a movimientos de nodos, re-renders y caché.
+- **Diseño nuevo del panel** (moderno, mismo estilo en escritorio y móvil): tarjeta con cabecera ("Filtrar por características" con icono + botón "Limpiar" que solo aparece si hay algo marcado), y chips redondeados con marca de verificación al seleccionarse. Se elimina el scroll horizontal con etiqueta pegajosa de la 2.2.x (que quedaba cortado y era incómodo): ahora los chips se envuelven en varias filas, compactos, tanto en móvil como en escritorio.
+- **Escritorio más ordenado ("se iba abajo")**: los campos de fecha/personas + "Buscar" pasan a un grid responsive (`auto-fit`), así en pantallas anchas caben en una fila y, al estrecharse, se reparten en menos columnas de forma ordenada, sin campos colgando a medias; en móvil, una sola columna con el botón a todo el ancho.
+- Si solo hay una taxonomía de características, se omite su etiqueta interna (redundante con la cabecera del panel); con varias, cada grupo muestra la suya.
+- El filtrado sigue siendo instantáneo y el botón "Reservar" de cada tarjeta no cambia.
+
 ## 2.2.1
 
 - Auditoría completa del addon tras la 2.2.0 (repasando todos los fallos ya corregidos en versiones anteriores: taxonomía jerárquica, AND en vez de OR, selector `.hb-accom[data-accom-id]`, freno de bucle, etc.) para confirmar que ninguno se ha reintroducido — ninguno lo estaba.

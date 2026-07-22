@@ -53,25 +53,34 @@
 	}
 }
 
-/*
- * El JS (positionFormBeforeResultsList en addon-filtros-public.js) coloca
- * este bloque como hermano inmediatamente anterior a `.hb-accom-list`, y
- * permanece oculto (display: none) hasta que HBook renderiza al menos un
- * resultado tras pulsar "Buscar" — entonces el JS añade la clase
- * .is-visible. No tiene sentido dejar elegir características antes de
- * tener ningún alojamiento sobre el que aplicarlas.
- */
+/* ══════════════════════════════════════════════
+   PANEL DE CARACTERÍSTICAS (chips)
+
+   El JS (positionFormBeforeResultsList en addon-filtros-public.js) coloca
+   este panel como hermano inmediatamente anterior a `.hb-accom-list`, y
+   permanece oculto (display: none) hasta que HBook renderiza al menos un
+   resultado tras pulsar "Buscar" — entonces el JS añade la clase
+   .is-visible. No tiene sentido dejar elegir características antes de
+   tener ningún alojamiento sobre el que aplicarlas.
+══════════════════════════════════════════════ */
+
 .addon-filtros-pills-form {
 	display: none;
-	flex-direction: column;
-	gap: 14px;
 	margin: 28px 0 0;
-	padding-top: 28px;
-	border-top: 1px solid var(--addon-border);
+	padding: 20px 22px;
+	background: #faf8f2;
+	border: 1px solid var(--addon-border);
+	border-radius: var(--addon-radius);
 }
 
 .addon-filtros-pills-form.is-visible {
-	display: flex;
+	display: block;
+	animation: addon-filtros-fade-in 0.25s ease;
+}
+
+@keyframes addon-filtros-fade-in {
+	from { opacity: 0; transform: translateY(-4px); }
+	to   { opacity: 1; transform: translateY(0); }
 }
 
 .addon-filtros-pills-header {
@@ -79,25 +88,42 @@
 	align-items: center;
 	justify-content: space-between;
 	gap: 12px;
+	margin-bottom: 16px;
 }
 
 .addon-filtros-pills-title {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
 	font-size: 15px;
 	font-weight: 700;
 	color: var(--addon-text);
 }
 
+.addon-filtros-pills-icon {
+	color: var(--addon-accent-hover);
+	flex: 0 0 auto;
+}
+
 .addon-filtros-clear-btn {
 	display: none;
 	align-items: center;
+	gap: 4px;
 	background: none;
 	border: none;
-	padding: 4px 2px;
+	padding: 6px 10px;
+	border-radius: 999px;
 	color: var(--addon-text-muted);
 	font-size: 13px;
 	font-weight: 600;
-	text-decoration: underline;
 	cursor: pointer;
+	transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.addon-filtros-clear-btn::before {
+	content: "\00d7";
+	font-size: 16px;
+	line-height: 1;
 }
 
 .addon-filtros-clear-btn.is-visible {
@@ -105,20 +131,20 @@
 }
 
 .addon-filtros-clear-btn:hover {
+	background: #efe9dc;
 	color: var(--addon-text);
 }
 
 .addon-filtros-pills-groups {
 	display: flex;
-	flex-wrap: wrap;
-	gap: 10px 20px;
+	flex-direction: column;
+	gap: 16px;
 }
 
 .addon-filtros-pill-group {
 	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: 8px;
+	flex-direction: column;
+	gap: 10px;
 }
 
 .addon-filtros-pill-group-label {
@@ -127,28 +153,39 @@
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 	color: var(--addon-text-muted);
-	margin-right: 2px;
+}
+
+.addon-filtros-pill-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
 }
 
 .addon-filtros-pill {
 	position: relative;
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	gap: 7px;
 	padding: 9px 16px;
 	border-radius: 999px;
 	border: 1.5px solid var(--addon-border);
 	background: #fff;
 	color: var(--addon-text);
 	font-size: 14px;
+	font-weight: 500;
 	line-height: 1.2;
 	cursor: pointer;
 	user-select: none;
-	transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+	transition: border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .addon-filtros-pill:hover {
 	border-color: var(--addon-accent);
+	box-shadow: 0 2px 8px rgba(252, 185, 40, 0.18);
+}
+
+.addon-filtros-pill:active {
+	transform: translateY(1px);
 }
 
 .addon-filtros-pill-input {
@@ -163,10 +200,30 @@
 	border: 0;
 }
 
-.addon-filtros-pill-input:focus-visible ~ .addon-filtros-pill-label {
-	outline: 2px solid var(--addon-accent);
-	outline-offset: 2px;
-	border-radius: 4px;
+/* Marca de verificación (oculta hasta que el chip está marcado) */
+.addon-filtros-pill-check {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 0;
+	overflow: hidden;
+	color: var(--addon-text-on-accent);
+	transition: width 0.15s ease;
+}
+
+.addon-filtros-pill-label {
+	white-space: nowrap;
+}
+
+/* Foco accesible por teclado sobre el chip completo */
+.addon-filtros-pill-input:focus-visible + .addon-filtros-pill-check + .addon-filtros-pill-label,
+.addon-filtros-pill:focus-within {
+	outline: none;
+}
+
+.addon-filtros-pill:focus-within {
+	border-color: var(--addon-accent-hover);
+	box-shadow: 0 0 0 3px rgba(253, 207, 109, 0.45);
 }
 
 /* Estado marcado: se aplica vía JS (clase .is-checked, máxima compatibilidad)
@@ -177,6 +234,11 @@
 	border-color: var(--addon-accent);
 	color: var(--addon-text-on-accent);
 	font-weight: 600;
+}
+
+.addon-filtros-pill.is-checked .addon-filtros-pill-check,
+.addon-filtros-pill:has(.addon-filtros-pill-input:checked) .addon-filtros-pill-check {
+	width: 14px;
 }
 
 .addon-filtros-no-taxonomies {
@@ -195,37 +257,47 @@
 ══════════════════════════════════════════════ */
 
 #addon-filtros-wrapper .hb-search-fields-and-submit {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: flex-end;
-	gap: 16px;
+	display: block;
 }
 
 /*
  * HBook maqueta .hb-search-fields (y cada campo dentro de él) con floats
  * y anchos en % (ver front-end/css/hbook.css: p.hb-check-dates-wrapper,
  * p.hb-people-wrapper, p.hb-search-button-wrapper { float: left; ... }).
- * Aquí se sustituye por flexbox, sin tocar el HTML de HBook, solo para
- * que los campos de fecha/personas y el botón "Buscar" queden alineados
- * y respondan bien en distintos anchos.
+ * Aquí se sustituye por un grid responsive (auto-fit), sin tocar el HTML
+ * de HBook: en pantallas anchas todos los campos + "Buscar" caben en una
+ * fila; según se estrecha, van repartiéndose en menos columnas de forma
+ * ordenada (nunca queda un campo "colgando" a medias), y en móvil pasan a
+ * una sola columna (ver la media query de más abajo).
  */
 #addon-filtros-wrapper .hb-search-fields {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: flex-end;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+	align-items: end;
 	gap: 16px;
 }
 
 #addon-filtros-wrapper .hb-search-fields > p {
 	float: none;
-	margin-right: 0;
 	width: auto;
-	flex: 1 1 150px;
+	min-width: 0;
+	margin: 0;
+}
+
+/* Que los inputs/selects de HBook ocupen todo el ancho de su celda */
+#addon-filtros-wrapper .hb-search-fields > p input[type="text"],
+#addon-filtros-wrapper .hb-search-fields > p select {
+	width: 100%;
+	box-sizing: border-box;
 }
 
 #addon-filtros-wrapper .hb-search-submit-wrapper {
-	order: 10;
-	flex: 0 0 auto;
+	display: flex;
+	align-items: flex-end;
+}
+
+#addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"] {
+	width: 100%;
 }
 
 #addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"],
@@ -252,15 +324,11 @@
 
 @media (max-width: 767.98px) {
 	#addon-filtros-wrapper .hb-search-fields {
-		gap: 20px;
-	}
-
-	#addon-filtros-wrapper .hb-search-fields > p {
-		flex-basis: 100%;
+		grid-template-columns: 1fr;
+		gap: 18px;
 	}
 
 	#addon-filtros-wrapper .hb-search-submit-wrapper {
-		flex-basis: 100%;
 		margin-top: 4px;
 	}
 
@@ -271,55 +339,33 @@
 }
 
 /* ══════════════════════════════════════════════
-   MÓVIL: características en tira horizontal
-   deslizable ("chips" con scroll-snap), para no
-   ocupar más alto del necesario
+   MÓVIL: panel de características compacto.
+   Los chips se envuelven en varias filas (sin
+   scroll horizontal), con menos relleno para no
+   ocupar demasiado alto.
 ══════════════════════════════════════════════ */
 
 @media (max-width: 767.98px) {
 	#addon-filtros-wrapper .addon-filtros-pills-form {
-		margin: 24px 0 0;
-		padding-top: 20px;
-		gap: 10px;
+		margin: 22px 0 0;
+		padding: 16px 16px 18px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pills-header {
+		margin-bottom: 14px;
 	}
 
 	#addon-filtros-wrapper .addon-filtros-pills-title {
 		font-size: 14px;
 	}
 
-	#addon-filtros-wrapper .addon-filtros-pills-groups {
-		display: flex;
-		flex-wrap: nowrap;
-		flex-direction: column;
-		gap: 10px;
-	}
-
-	#addon-filtros-wrapper .addon-filtros-pill-group {
-		flex-wrap: nowrap;
+	#addon-filtros-wrapper .addon-filtros-pill-list {
 		gap: 8px;
-		margin: 0 -20px;
-		padding: 0 20px;
-		overflow-x: auto;
-		overflow-y: hidden;
-		scroll-snap-type: x proximity;
-		-webkit-overflow-scrolling: touch;
-	}
-
-	#addon-filtros-wrapper .addon-filtros-pill-group-label {
-		position: sticky;
-		left: 20px;
-		flex: 0 0 auto;
-		background: var(--addon-surface);
-		font-size: 11px;
-		padding-right: 2px;
 	}
 
 	#addon-filtros-wrapper .addon-filtros-pill {
-		flex: 0 0 auto;
-		scroll-snap-align: start;
 		padding: 8px 14px;
 		font-size: 13px;
-		gap: 4px;
 	}
 }
 
