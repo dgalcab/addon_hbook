@@ -30,6 +30,12 @@
  * 5. Vuelve a aplicar todo lo anterior cada vez que HBook renderiza
  *    resultados nuevos (nueva búsqueda de fechas), gracias a un
  *    MutationObserver.
+ * 6. Mantiene el bloque de características OCULTO hasta que, tras pulsar
+ *    "Buscar", HBook renderiza al menos un alojamiento: no tiene sentido
+ *    dejar elegir características antes de tener ningún resultado sobre
+ *    el que aplicarlas. En cuanto hay tarjetas, el bloque aparece justo
+ *    encima de ellas (se reubica una única vez, al cargar, como hermano
+ *    inmediato anterior a `.hb-accom-list`).
  */
 ( function () {
 	'use strict';
@@ -41,36 +47,45 @@
 		}
 
 		var form = document.getElementById( 'addon-filtros-form' );
-
-		/**
-		 * Mueve el bloque de pills de características para que sea un
-		 * hijo más de .hb-search-fields (donde HBook ya tiene, cada uno en
-		 * su propio <p>, los campos de fecha/personas y el botón "Buscar"),
-		 * en vez de quedarse fuera, antes de todo el bloque. Es un
-		 * MOVIMIENTO real del nodo (no una copia), así que los checkboxes
-		 * conservan sus eventos ya enlazados.
-		 *
-		 * Esto permite, con una sola regla CSS por punto de ruptura
-		 * (ver addon-filtros-public.css), decidir el ORDEN visual de las
-		 * pills sin duplicar HTML: en escritorio siguen viéndose como una
-		 * fila propia encima de los campos; en móvil se colocan entre los
-		 * campos de fecha/personas y el botón "Buscar".
-		 */
-		function relocatePillsIntoSearchFields() {
-			if ( ! form ) {
-				return;
-			}
-			var hbSearchFields = wrapper.querySelector( '.hb-search-fields' );
-			if ( hbSearchFields ) {
-				hbSearchFields.appendChild( form );
-			}
-		}
-		relocatePillsIntoSearchFields();
-
 		var resultsList = wrapper.querySelector( '.hb-accom-list' );
+		var clearBtn = document.getElementById( 'addon-filtros-clear-btn' );
 		var checkboxes = form ? Array.prototype.slice.call( form.querySelectorAll( 'input[type="checkbox"]' ) ) : [];
 		var badgesMap = window.AddonFiltrosHbook.badgesMap || {};
 		var linksMap = window.AddonFiltrosHbook.linksMap || {};
+
+		/**
+		 * Mueve el bloque de características para que sea el hermano
+		 * inmediatamente anterior a `.hb-accom-list` (donde HBook renderiza
+		 * los resultados de cada búsqueda), en vez de quedarse arriba, junto
+		 * a los campos de fecha/personas. Es un MOVIMIENTO real del nodo (no
+		 * una copia), así que los checkboxes conservan sus eventos ya
+		 * enlazados. `.hb-accom-list` en sí no se sustituye nunca (HBook solo
+		 * reemplaza su contenido interno en cada búsqueda), así que basta con
+		 * colocarlo una vez al cargar la página.
+		 */
+		function positionFormBeforeResultsList() {
+			if ( ! form || ! resultsList || ! resultsList.parentNode ) {
+				return;
+			}
+			if ( form.nextSibling !== resultsList ) {
+				resultsList.parentNode.insertBefore( form, resultsList );
+			}
+		}
+		positionFormBeforeResultsList();
+
+		/**
+		 * El bloque de características solo tiene sentido si ya hay
+		 * alojamientos sobre los que aplicarlo: permanece oculto hasta que,
+		 * tras pulsar "Buscar", HBook renderiza al menos una tarjeta.
+		 */
+		function updateFormVisibility() {
+			if ( ! form || ! resultsList ) {
+				return;
+			}
+			var hasCards = resultsList.querySelectorAll( '.hb-accom[data-accom-id]' ).length > 0;
+			form.classList.toggle( 'is-visible', hasCards );
+		}
+		updateFormVisibility();
 
 		// null = sin filtro de características activo (se muestra todo lo que devuelva HBook).
 		var allowedIds = null;
@@ -343,24 +358,59 @@
 			}
 		}
 
+		/**
+		 * El botón "Limpiar" solo se muestra si hay alguna característica
+		 * marcada (si no hay nada que limpiar, no aporta y solo ocupa sitio).
+		 */
+		function updateClearButtonVisibility() {
+			if ( ! clearBtn ) {
+				return;
+			}
+			var anyChecked = checkboxes.some( function ( checkbox ) {
+				return checkbox.checked;
+			} );
+			clearBtn.classList.toggle( 'is-visible', anyChecked );
+		}
+
 		checkboxes.forEach( function ( checkbox ) {
 			updatePillState( checkbox );
 			checkbox.addEventListener( 'change', function () {
 				updatePillState( checkbox );
+				updateClearButtonVisibility();
 				fetchAllowedIds();
 			} );
 		} );
+		updateClearButtonVisibility();
+
+		// Filtrado instantáneo: al marcar/desmarcar se pide de inmediato la
+		// lista de IDs al endpoint del addon (sin esperar a ningún envío de
+		// formulario), así que la selección se refleja en tiempo real.
+		if ( clearBtn ) {
+			clearBtn.addEventListener( 'click', function () {
+				checkboxes.forEach( function ( checkbox ) {
+					if ( checkbox.checked ) {
+						checkbox.checked = false;
+						updatePillState( checkbox );
+					}
+				} );
+				updateClearButtonVisibility();
+				allowedIds = null;
+				applyCharacteristicsFilter();
+			} );
+		}
 
 		// HBook sustituye por completo el contenido de .hb-accom-list en
 		// cada búsqueda de fechas (ver accommodation-list.js/booking-form.js
 		// de HBook: `$booking_wrapper.find('.hb-accom-list').html(...)`).
-		// Reaplicamos filtro + badges cada vez que eso ocurre.
+		// Reaplicamos filtro + badges, y reevaluamos si el bloque de
+		// características debe mostrarse, cada vez que eso ocurre.
 		if ( resultsList && window.MutationObserver ) {
 			var observer = new MutationObserver( function () {
 				captureIntroText();
 				injectBadges();
 				buildReservarButtons();
 				applyCharacteristicsFilter();
+				updateFormVisibility();
 			} );
 			observer.observe( resultsList, { childList: true } );
 		}

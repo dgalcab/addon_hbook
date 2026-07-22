@@ -3,10 +3,12 @@
  * Todos los selectores viven bajo #addon-filtros-wrapper para no
  * colisionar con los estilos del tema.
  *
- * Diseño: un único bloque de búsqueda ("search card") que funde
- * visualmente las pills de características de este addon con el
- * formulario de fechas/personas real de HBook, y debajo el grid de
- * resultados — también generado por HBook, solo restylado aquí.
+ * Diseño: una única tarjeta de búsqueda ("search card") con el
+ * formulario de fechas/personas real de HBook arriba y, debajo, el grid
+ * de resultados (también generado por HBook, solo restylado aquí). Las
+ * pills de características viven ENTRE ambos: ocultas por defecto, solo
+ * aparecen (JS añade la clase .is-visible) en cuanto hay resultados que
+ * filtrar.
  */
 
 #addon-filtros-wrapper {
@@ -52,24 +54,64 @@
 }
 
 /*
- * El JS (relocatePillsIntoSearchFields en addon-filtros-public.js) mueve
- * este bloque para que sea un hijo más de .hb-search-fields (donde HBook
- * ya tiene, cada uno en su propio <p>, los campos de fecha/personas y el
- * botón "Buscar"). Así, con "order" y sin duplicar HTML, se puede decidir
- * su posición por punto de ruptura: en escritorio va delante de todo
- * (order: -1, como una fila propia); en móvil, entre los campos y el
- * botón "Buscar" (ver la media query de .hb-search-fields más abajo).
+ * El JS (positionFormBeforeResultsList en addon-filtros-public.js) coloca
+ * este bloque como hermano inmediatamente anterior a `.hb-accom-list`, y
+ * permanece oculto (display: none) hasta que HBook renderiza al menos un
+ * resultado tras pulsar "Buscar" — entonces el JS añade la clase
+ * .is-visible. No tiene sentido dejar elegir características antes de
+ * tener ningún alojamiento sobre el que aplicarlas.
  */
 .addon-filtros-pills-form {
+	display: none;
+	flex-direction: column;
+	gap: 14px;
+	margin: 28px 0 0;
+	padding-top: 28px;
+	border-top: 1px solid var(--addon-border);
+}
+
+.addon-filtros-pills-form.is-visible {
+	display: flex;
+}
+
+.addon-filtros-pills-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+}
+
+.addon-filtros-pills-title {
+	font-size: 15px;
+	font-weight: 700;
+	color: var(--addon-text);
+}
+
+.addon-filtros-clear-btn {
+	display: none;
+	align-items: center;
+	background: none;
+	border: none;
+	padding: 4px 2px;
+	color: var(--addon-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.addon-filtros-clear-btn.is-visible {
+	display: inline-flex;
+}
+
+.addon-filtros-clear-btn:hover {
+	color: var(--addon-text);
+}
+
+.addon-filtros-pills-groups {
 	display: flex;
 	flex-wrap: wrap;
-	align-items: center;
 	gap: 10px 20px;
-	margin-bottom: 20px;
-	padding-bottom: 20px;
-	border-bottom: 1px solid var(--addon-border);
-	order: -1;
-	flex-basis: 100%;
 }
 
 .addon-filtros-pill-group {
@@ -163,9 +205,9 @@
  * HBook maqueta .hb-search-fields (y cada campo dentro de él) con floats
  * y anchos en % (ver front-end/css/hbook.css: p.hb-check-dates-wrapper,
  * p.hb-people-wrapper, p.hb-search-button-wrapper { float: left; ... }).
- * Aquí se sustituye por flexbox, sin tocar el HTML de HBook, para poder
- * usar "order" y reordenar el bloque de características (que el JS mueve
- * a este mismo contenedor) sin duplicar nada.
+ * Aquí se sustituye por flexbox, sin tocar el HTML de HBook, solo para
+ * que los campos de fecha/personas y el botón "Buscar" queden alineados
+ * y respondan bien en distintos anchos.
  */
 #addon-filtros-wrapper .hb-search-fields {
 	display: flex;
@@ -204,8 +246,8 @@
 }
 
 /* ══════════════════════════════════════════════
-   MÓVIL: características entre los campos y "Buscar",
-   en formato compacto
+   MÓVIL: campos de fecha/personas apilados y
+   botón "Buscar" a todo lo ancho
 ══════════════════════════════════════════════ */
 
 @media (max-width: 767.98px) {
@@ -217,32 +259,6 @@
 		flex-basis: 100%;
 	}
 
-	#addon-filtros-wrapper .addon-filtros-pills-form {
-		order: 5;
-		flex-basis: 100%;
-		margin: 8px 0 20px;
-		padding: 20px 0 0;
-		border-bottom: none;
-		border-top: 1px solid var(--addon-border);
-		gap: 8px 10px;
-	}
-
-	#addon-filtros-wrapper .addon-filtros-pill-group {
-		gap: 8px;
-	}
-
-	#addon-filtros-wrapper .addon-filtros-pill-group-label {
-		flex-basis: 100%;
-		font-size: 11px;
-		margin-bottom: 4px;
-	}
-
-	#addon-filtros-wrapper .addon-filtros-pill {
-		padding: 7px 13px;
-		font-size: 13px;
-		gap: 4px;
-	}
-
 	#addon-filtros-wrapper .hb-search-submit-wrapper {
 		flex-basis: 100%;
 		margin-top: 4px;
@@ -251,6 +267,59 @@
 	#addon-filtros-wrapper .hb-search-submit-wrapper input[type="submit"] {
 		width: 100%;
 		padding: 14px 28px;
+	}
+}
+
+/* ══════════════════════════════════════════════
+   MÓVIL: características en tira horizontal
+   deslizable ("chips" con scroll-snap), para no
+   ocupar más alto del necesario
+══════════════════════════════════════════════ */
+
+@media (max-width: 767.98px) {
+	#addon-filtros-wrapper .addon-filtros-pills-form {
+		margin: 24px 0 0;
+		padding-top: 20px;
+		gap: 10px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pills-title {
+		font-size: 14px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pills-groups {
+		display: flex;
+		flex-wrap: nowrap;
+		flex-direction: column;
+		gap: 10px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pill-group {
+		flex-wrap: nowrap;
+		gap: 8px;
+		margin: 0 -20px;
+		padding: 0 20px;
+		overflow-x: auto;
+		overflow-y: hidden;
+		scroll-snap-type: x proximity;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pill-group-label {
+		position: sticky;
+		left: 20px;
+		flex: 0 0 auto;
+		background: var(--addon-surface);
+		font-size: 11px;
+		padding-right: 2px;
+	}
+
+	#addon-filtros-wrapper .addon-filtros-pill {
+		flex: 0 0 auto;
+		scroll-snap-align: start;
+		padding: 8px 14px;
+		font-size: 13px;
+		gap: 4px;
 	}
 }
 

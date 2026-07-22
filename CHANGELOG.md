@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.2.0
+
+Rediseño del bloque de características, con un cambio de comportamiento explícitamente pedido:
+
+- Las características ya NO se muestran junto a los campos de fecha/personas desde el principio: permanecen ocultas hasta que se pulsa "Buscar" y HBook renderiza al menos un alojamiento para esas fechas. No tenía sentido dejar elegir características antes de tener ningún resultado sobre el que aplicarlas.
+  - El JS ya no reubica el bloque dentro de `.hb-search-fields` (enfoque de la 2.1.0): ahora lo coloca, una única vez al cargar la página, como hermano inmediatamente anterior a `.hb-accom-list` (donde HBook renderiza los resultados), y alterna una clase (`.is-visible`) cada vez que esa lista pasa de vacía a tener tarjetas o al revés (incluida una nueva búsqueda de fechas sin resultados, que también lo vuelve a ocultar).
+- Nueva cabecera del bloque ("Filtrar por características") con un botón "Limpiar" que solo aparece si hay alguna característica marcada, para quitarlas todas de un vistazo sin tener que ir chip a chip.
+- En móvil, las características pasan a mostrarse como una tira horizontal deslizable con scroll-snap (en vez de envolver en varias filas, que ocupaba mucho alto), con la etiqueta de cada grupo fija a la izquierda mientras se desliza — más compacto y más fácil de recorrer con el pulgar.
+- El filtrado sigue siendo instantáneo (se sigue pidiendo la lista de IDs al marcar/desmarcar, sin esperar a ningún envío de formulario) y el botón "Reservar" de cada tarjeta sigue funcionando exactamente igual que antes (mismos parámetros de URL, mismo destino).
+
 ## 2.1.1
 
 - Más aire en la caja de búsqueda en móvil: más padding interior de la tarjeta, más separación entre los campos apilados, entre el bloque de características y el botón "Buscar", y el propio botón "Buscar" pasa a ocupar todo el ancho (más cómodo de pulsar y más acorde con el resto del diseño).

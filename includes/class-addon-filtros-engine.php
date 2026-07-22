@@ -86,15 +86,18 @@ class Addon_Filtros_Hbook_Engine {
 	}
 
 	/**
-	 * Fila de "pills" (chips) de características, pensada para fundirse
-	 * visualmente con los campos de fecha/personas de HBook en un único
-	 * bloque de búsqueda. Un grupo de pills por cada taxonomía realmente
-	 * registrada contra hb_accommodation (ver addon_filtros_hbook_get_taxonomies()).
+	 * Bloque de "pills" (chips) de características. A diferencia de antes,
+	 * este bloque NO vive fundido con los campos de fecha/personas de
+	 * HBook: permanece oculto (clase .addon-filtros-pills-form, sin
+	 * .is-visible) hasta que el usuario pulsa "Buscar" y HBook renderiza
+	 * alojamientos de verdad. El JS (ver addon-filtros-public.js) lo
+	 * posiciona una única vez justo antes de `.hb-accom-list` y alterna
+	 * la clase .is-visible cada vez que esa lista pasa de vacía a tener
+	 * tarjetas (o al revés).
 	 *
-	 * Es un <div>, no un <form>: el JS lo reubica dentro del propio
-	 * formulario de HBook (.hb-search-fields) para poder reordenarlo en
-	 * móvil entre los campos y el botón "Buscar" — un <form> anidado
-	 * dentro de otro <form> es HTML inválido y el navegador lo rompería.
+	 * Es un <div>, no un <form>: así se puede mover con seguridad por el
+	 * DOM sin arriesgarse a anidar un <form> dentro de otro <form> (HTML
+	 * inválido) en ningún punto de su recorrido.
 	 */
 	private static function render_pills_row() {
 		$taxonomies = addon_filtros_hbook_get_taxonomies();
@@ -103,24 +106,30 @@ class Addon_Filtros_Hbook_Engine {
 			return '';
 		}
 
-		$has_terms = false;
+		$groups_markup = '';
+		foreach ( $taxonomies as $taxonomy ) {
+			$groups_markup .= self::render_taxonomy_group( $taxonomy );
+		}
+
+		if ( '' === $groups_markup ) {
+			return '';
+		}
+
 		ob_start();
 		?>
 		<div id="addon-filtros-form" class="addon-filtros-pills-form">
-			<?php
-			foreach ( $taxonomies as $taxonomy ) {
-				$group_markup = self::render_taxonomy_group( $taxonomy );
-				if ( $group_markup ) {
-					$has_terms = true;
-					echo $group_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-				}
-			}
-			?>
+			<div class="addon-filtros-pills-header">
+				<span class="addon-filtros-pills-title"><?php esc_html_e( 'Filtrar por características', 'addon-filtros-hbook' ); ?></span>
+				<button type="button" id="addon-filtros-clear-btn" class="addon-filtros-clear-btn">
+					<?php esc_html_e( 'Limpiar', 'addon-filtros-hbook' ); ?>
+				</button>
+			</div>
+			<div class="addon-filtros-pills-groups">
+				<?php echo $groups_markup; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+			</div>
 		</div>
 		<?php
-		$markup = ob_get_clean();
-
-		return $has_terms ? $markup : '';
+		return ob_get_clean();
 	}
 
 	/**
