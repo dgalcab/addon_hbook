@@ -87,6 +87,38 @@
 		}
 		updateFormVisibility();
 
+		/**
+		 * Red de seguridad: además del MutationObserver de más abajo (que
+		 * reacciona al HTML que HBook inyecta en .hb-accom-list), al pulsar
+		 * "Buscar" se lanza un sondeo corto que vuelve a comprobar la
+		 * visibilidad varias veces mientras dura la búsqueda AJAX. No
+		 * debería hacer falta (el observer ya se dispara solo), pero como
+		 * es la única pieza de este addon que decide si el bloque de
+		 * características se ve o no, conviene no depender de un único
+		 * mecanismo para algo tan visible.
+		 */
+		function pollFormVisibilityAfterSearch() {
+			var attempts = 0;
+			var maxAttempts = 30;
+			var poll = setInterval( function () {
+				attempts++;
+				updateFormVisibility();
+				if ( ( form && form.classList.contains( 'is-visible' ) ) || attempts >= maxAttempts ) {
+					clearInterval( poll );
+				}
+			}, 400 );
+		}
+		wrapper.addEventListener(
+			'submit',
+			function ( event ) {
+				if ( event.target && event.target.closest && event.target.closest( '.hb-accom-list' ) ) {
+					return;
+				}
+				pollFormVisibilityAfterSearch();
+			},
+			true
+		);
+
 		// null = sin filtro de características activo (se muestra todo lo que devuelva HBook).
 		var allowedIds = null;
 		var noMatchMessage = null;

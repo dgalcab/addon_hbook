@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.1
+
+- Auditoría completa del addon tras la 2.2.0 (repasando todos los fallos ya corregidos en versiones anteriores: taxonomía jerárquica, AND en vez de OR, selector `.hb-accom[data-accom-id]`, freno de bucle, etc.) para confirmar que ninguno se ha reintroducido — ninguno lo estaba.
+- La única pieza realmente nueva de la 2.2.0 es la que decide si el bloque de características se ve o no (antes siempre se veía, ahora depende de si hay tarjetas). Dependía únicamente del `MutationObserver` sobre `.hb-accom-list`. Como red de seguridad adicional, ahora también se relanza esa misma comprobación varias veces (hasta 12s) justo al pulsar "Buscar", por si en algún entorno concreto esa comprobación no llegara a dispararse a tiempo por el observer.
+
 ## 2.2.0
 
 Rediseño del bloque de características, con un cambio de comportamiento explícitamente pedido:
