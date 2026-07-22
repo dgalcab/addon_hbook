@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.3.1
+
+- **Causa raíz de que "pulso una característica y no hace nada"**: este sitio optimiza/difiere la carga de scripts (se ve en la consola por los errores `wp is not defined` en wp-i18n y Contact Form 7). Si el optimizador carga nuestro script como `async` o lo inyecta tarde, el DOM ya está parseado cuando corre y el evento `DOMContentLoaded` **ya se ha disparado** — así que todo lo que colgaba de ese evento (colocar las pills, enganchar los clics, mostrar el bloque) no se ejecutaba nunca. Ahora la inicialización no depende solo de `DOMContentLoaded`: si el DOM ya está listo cuando corre el script, arranca de inmediato, y además se añade `load` como último respaldo. La inicialización es idempotente (solo corre una vez aunque se dispare por varias vías) y, si los datos aún no están, reintenta en el respaldo.
+
 ## 2.3.0
 
 Rediseño del panel de características y arreglo de fondo del filtro que "no seleccionaba":

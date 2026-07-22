@@ -40,11 +40,17 @@
 ( function () {
 	'use strict';
 
-	document.addEventListener( 'DOMContentLoaded', function () {
+	var initialized = false;
+
+	function init() {
+		if ( initialized ) {
+			return;
+		}
 		var wrapper = document.getElementById( 'addon-filtros-wrapper' );
 		if ( ! wrapper || typeof window.AddonFiltrosHbook === 'undefined' ) {
 			return;
 		}
+		initialized = true;
 
 		var form = document.getElementById( 'addon-filtros-form' );
 		var resultsList = wrapper.querySelector( '.hb-accom-list' );
@@ -474,5 +480,29 @@
 			} );
 			observer.observe( resultsList, { childList: true } );
 		}
-	} );
+	}
+
+	/*
+	 * IMPORTANTE — por qué NO basta con `DOMContentLoaded`:
+	 *
+	 * Este sitio usa optimización de carga de scripts (se ve en consola por
+	 * los errores "wp is not defined" en wp-i18n / Contact Form 7, señal de
+	 * que los scripts se difieren o combinan). Si el optimizador carga este
+	 * script como `async` o lo inyecta tarde, el DOM YA está parseado cuando
+	 * corre: en ese caso el evento `DOMContentLoaded` ya se disparó y un
+	 * listener añadido ahora NO se ejecutaría nunca — con lo que ni se
+	 * colocan las pills, ni se enganchan los clics, ni se muestran las
+	 * características. Es exactamente el síntoma de "pulso y no hace nada".
+	 *
+	 * Por eso: si el DOM aún se está cargando, se espera a DOMContentLoaded;
+	 * si ya está listo, se arranca de inmediato. Y se añade `load` como
+	 * último cinturón de seguridad. init() es idempotente (initialized), así
+	 * que aunque se dispare por varias vías, solo corre una vez.
+	 */
+	if ( document.readyState === 'loading' ) {
+		document.addEventListener( 'DOMContentLoaded', init );
+	} else {
+		init();
+	}
+	window.addEventListener( 'load', init );
 } )();
